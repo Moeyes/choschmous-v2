@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Choschmous v2
 
-## Getting Started
+Next.js application with Prisma + PostgreSQL.
 
-First, run the development server:
+## Why `npx prisma init` fails here
+
+This repository already contains a Prisma setup (`prisma/schema.prisma` and `prisma/prisma.config.ts`).
+So this error is expected:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx prisma init
+# ERROR: A folder called prisma already exists
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+You should **not** run `prisma init` again in this project.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Prisma setup from scratch (for this repo)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1) Install dependencies
 
-## Learn More
+```bash
+pnpm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+> `postinstall` runs `prisma generate`, so Prisma Client is generated automatically after install.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2) Create your environment file
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create `.env` at the project root with your PostgreSQL connection string:
 
-## Deploy on Vercel
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/choschmous?schema=public"
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3) Make sure PostgreSQL is running
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Your `DATABASE_URL` host/port/database/user/password must match a running PostgreSQL instance.
+
+### 4) Validate Prisma can read your schema
+
+```bash
+pnpm prisma validate
+```
+
+### 5) Sync schema to database
+
+If you are in local development and want to push the current schema quickly:
+
+```bash
+pnpm prisma db push
+```
+
+If you want migration files (recommended for team workflows):
+
+```bash
+pnpm prisma migrate dev --name init
+```
+
+### 6) Open Prisma Studio (optional)
+
+```bash
+pnpm prisma studio
+```
+
+### 7) Run the app
+
+```bash
+pnpm dev
+```
+
+## Common Prisma commands
+
+```bash
+pnpm prisma generate
+pnpm prisma validate
+pnpm prisma format
+pnpm prisma db push
+pnpm prisma migrate dev --name <migration_name>
+pnpm prisma migrate reset
+pnpm prisma studio
+```
+
+## How Prisma is wired in this codebase
+
+- Prisma schema: `prisma/schema.prisma`
+- Prisma config: `prisma/prisma.config.ts`
+- Shared Prisma client instance: `infrastructure/db/prisma.ts`
+
+## Troubleshooting
+
+### `Environment variable not found: DATABASE_URL`
+
+Your `.env` file is missing or `DATABASE_URL` is empty.
+
+### `P1001: Can't reach database server`
+
+PostgreSQL is not reachable at the URL in `DATABASE_URL` (host, port, firewall, or container networking issue).
+
+### Generated client mismatch
+
+If schema changed but types look stale:
+
+```bash
+pnpm prisma generate
+```
+
+---
+If you want, I can also give you a **Docker Compose PostgreSQL + ready-to-copy `.env`** setup for this project.
