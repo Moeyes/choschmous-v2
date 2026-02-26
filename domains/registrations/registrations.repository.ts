@@ -8,7 +8,7 @@ import { prisma } from '@/infrastructure/db/prisma';
 import type {
   Enroll, Athlete, Leader,
   AthleteParticipation, LeaderParticipation,
-  Registration, RegistrationFilters,
+  Registration, RegistrationFilters, Gender, IdDocType, LeaderRole,
 } from './registrations.types';
 
 export const registrationsRepository = {
@@ -50,7 +50,7 @@ export const registrationsRepository = {
   // ── Queries ───────────────────────────────────────────────────
 
   async findAll(filters: RegistrationFilters): Promise<Registration[]> {
-    const { eventId, sportId, organizationId, status, role, gender, search, page = 1, limit = 20 } = filters;
+    const { eventId, sportId, organizationId, role, gender, search, page = 1, limit = 20 } = filters;
 
     // Athletes query
     const athleteWhere = {
@@ -93,19 +93,19 @@ export const registrationsRepository = {
     ]);
 
     // Map to unified Registration shape
-    const athleteRegistrations: Registration[] = athletes.map((ap: any) => ({
+    const athleteRegistrations: Registration[] = athletes.map((ap) => ({
       enrollId: ap.athletes.enroll.id,
       name: ap.athletes.enroll.name,
-      gender: ap.athletes.enroll.gender as any,
+      gender: ap.athletes.enroll.gender as Gender,
       nationality: ap.athletes.enroll.nationality,
       dob: ap.athletes.enroll.dob,
-      idDocType: ap.athletes.enroll.idDocType as any,
+      idDocType: ap.athletes.enroll.idDocType as IdDocType,
       photoPath: ap.athletes.enroll.photoPath,
       documentsPath: ap.athletes.enroll.DocumentsPath,
       role: 'Athlete',
       status: 'pending', // extend with status field when added to schema
       athleteClass: ap.athletes.class,
-      athleteCategory: ap.athletes.enroll.gender as any,
+      athleteCategory: ap.athletes.enroll.gender as Gender,
       leaderRole: null,
       phoneNumber: null,
       eventId: ap.eventsID,
@@ -115,20 +115,20 @@ export const registrationsRepository = {
       createdAt: ap.createdAt,
     }));
 
-    const leaderRegistrations: Registration[] = leaders.map((lp: any) => ({
+    const leaderRegistrations: Registration[] = leaders.map((lp) => ({
       enrollId: lp.leaders.enroll.id,
       name: lp.leaders.enroll.name,
-      gender: lp.leaders.enroll.gender as any,
+      gender: lp.leaders.enroll.gender as Gender,
       nationality: lp.leaders.enroll.nationality,
       dob: lp.leaders.enroll.dob,
-      idDocType: lp.leaders.enroll.idDocType as any,
+      idDocType: lp.leaders.enroll.idDocType as IdDocType,
       photoPath: lp.leaders.enroll.photoPath,
       documentsPath: lp.leaders.enroll.DocumentsPath,
       role: 'Leader',
       status: 'pending',
       athleteClass: null,
       athleteCategory: null,
-      leaderRole: lp.leaders.roles as any,
+      leaderRole: lp.leaders.roles as LeaderRole,
       phoneNumber: lp.leaders.phoneNumber,
       eventId: lp.eventsID,
       sportId: lp.sportsID,

@@ -1,9 +1,15 @@
-import type { WizardViewModel } from './types';
+import type { WizardViewModel, WizardStepViewModel } from './types';
 import { CheckCircle2 } from 'lucide-react';
 
-export function mapWizardToViewModel(wizard: any): WizardViewModel {
+interface WizardLike {
+  stepsWithState: WizardStepViewModel[];
+  stepsLength: number;
+  goToStep: (index: number) => void;
+}
+
+export function mapWizardToViewModel(wizard: WizardLike): WizardViewModel {
   return {
-    steps: wizard.stepsWithState.map((s: any) => ({
+    steps: wizard.stepsWithState.map((s) => ({
       key: s.key,
       label: s.label,
       index: s.index,
@@ -14,7 +20,7 @@ export function mapWizardToViewModel(wizard: any): WizardViewModel {
     })),
     stepsLength: wizard.stepsLength,
     goToStepByKey: (key: string) => {
-      const idx = wizard.stepsWithState.findIndex((s: any) => s.key === key);
+      const idx = wizard.stepsWithState.findIndex((s) => s.key === key);
       if (idx !== -1) wizard.goToStep(idx);
     },
   };

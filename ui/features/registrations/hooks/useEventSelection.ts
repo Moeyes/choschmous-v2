@@ -1,20 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-// import { useEvents } from '@/ui/features/events/hooks/useEvents';
 
 import { ROUTES } from '@/config/routes';
 
 export function useEventSelection() {
   const router = useRouter();
-  const { events, loading } = useEvents();
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem('selectedEventId');
-    if (stored) setSelectedEventId(stored);
-  }, []);
+  const events: Array<{ id: string }> = [];
+  const loading = false;
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : sessionStorage.getItem('selectedEventId')
+  );
 
   const selectEvent = (eventId: string) => {
     setSelectedEventId(eventId);

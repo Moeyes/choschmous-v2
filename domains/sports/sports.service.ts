@@ -1,7 +1,7 @@
 
 import { sportsRepository } from './sports.repository';
 import { createSportSchema, updateSportSchema } from './sports.validators';
-import type { Sport, SportSummary, SportFilters, CreateSportInput, UpdateSportInput } from './sports.types';
+import type { Sport, SportFilters, CreateSportInput, UpdateSportInput } from './sports.types';
 
 export const sportsService = {
 
