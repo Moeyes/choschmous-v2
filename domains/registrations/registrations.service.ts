@@ -9,7 +9,7 @@ import { createRegistrationSchema, updateRegistrationStatusSchema } from './regi
 import type {
   Registration, RegistrationFilters,
   CreateRegistrationInput, UpdateRegistrationStatusInput,
-  AthleteCategory, LeaderRole,
+  LeaderRole, IdDocType,
 } from './registrations.types';
 import { slug } from '@/lib/utils/formatting';
 // ── Normalizer (migrated from registrationNormalizer.ts) ─────
@@ -71,9 +71,9 @@ export function normalizeRegistrationInput(body: Partial<CreateRegistrationInput
     leaderRole: (body.leaderRole as string) ?? null,
     coachName: (body.coachName as string) ?? null,
     assistantName: (body.assistantName as string) ?? null,
-    organizationType: (body as any).organization?.type ?? null,
+    organizationType: null,
     organizationId: String(body.organizationId ?? ''),
-    organizationName: (body as any).organization?.name ?? null,
+    organizationName: null,
     eventId: body.eventId ? String(body.eventId) : null,
     sport: primarySport,
     sports,
@@ -107,7 +107,7 @@ export const registrationsService = {
       gender: parsed.gender,
       nationality: parsed.nationality,
       dob: new Date(parsed.dateOfBirth),
-      idDocType: parsed.nationality as any,
+      idDocType: parsed.nationalID ? 'IDCard' : 'BirthCertificate' as IdDocType,
       address: null,
       photoPath: parsed.photoUrl ?? null,
       documentsPath: parsed.nationalityDocumentUrl ?? null,

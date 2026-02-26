@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { FC, ReactNode } from 'react';
+import type { ComponentType, ReactNode, SVGProps } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 
 export interface WizardStep {
   key: string;
   label: string;
-  icon?: FC<any>; // optional icon for step
+  icon?: ComponentType<SVGProps<SVGSVGElement>>; // optional icon for step
   component: ReactNode;
   validate?: () => boolean;
 }

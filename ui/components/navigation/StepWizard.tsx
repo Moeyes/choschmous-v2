@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
-import type { FC } from 'react';
 import type { WizardStep } from './useStepWizard';
 
 interface StepWizardProps {
