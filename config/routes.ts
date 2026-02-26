@@ -17,7 +17,7 @@ export const ROUTES = {
     LOGIN: '/login',
   },
   ADMIN: {
-    ROOT: '/admin',
+    ROOT: '/admin', 
     EVENTS: '/admin/events',
     EVENT: (id: string) => `/admin/events/${id}`,
     SPORTS: '/admin/sports',

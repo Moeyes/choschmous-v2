@@ -16,6 +16,11 @@ export class EventsRepository {
         where,
         ...toPrismaSkipTake(pagination),
         orderBy: { createdAt: 'desc' },
+        include: {
+          categories: {
+            include: { sports: true },
+          },
+        },
       }),
       this.db.events.count({ where }),
     ]);

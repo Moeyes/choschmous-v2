@@ -94,12 +94,12 @@ model Province {
 
 // ── Events ────────────────────────────────────────────────────
 
-model Events {
+model Events{
   id        Int      @id @default(autoincrement())
   name      String
   date      DateTime
   createdAt DateTime @default(now())
-
+  isActive  Boolean  @default(true)
   categories        categories[]
   AthleteParticipat AthleteParticipat[]
   LeaderParticipat  LeaderParticipat[]

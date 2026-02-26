@@ -6,7 +6,7 @@ import { prisma } from '@/infrastructure/db';
 
 export async function EventSelectionSection() {
   const service = new EventsService(new EventsRepository(prisma));
-  const rawEvents = (await service.list({ isActive: true, take: 100 })).data;
+  const rawEvents = (await service.list({ take: 100 })).data;
   const events = rawEvents.map((e) => ({ ...e, id: String(e.id) }));
 
   return (

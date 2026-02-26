@@ -1,3 +1,14 @@
+// ...existing code...
+
+// EventType enum for event classification
+export enum EventType {
+  NATIONAL = 'ថ្នាក់ជាតិ',
+  UNIVERSITY = 'សាកលវិទ្យាល័យ',
+  HIGH_SCHOOL = 'វិទ្យាល័យ',
+  PRIMARY_SCHOOL = 'បឋមសិក្សា',
+}
+
+// ...existing code...
 // ============================================================
 // domains/events/events.types.ts
 // Derived from: Events + categories tables in ER diagram
@@ -11,13 +22,14 @@ export interface Event {
   name: string;
   date: Date;
   createdAt: Date;
+  eventType: EventType;
 }
 
 /** Maps to: categories table (join of Events × Sports) */
 export interface Category {
   id: number;
-  eventsId: number;   // FK → Events.id
-  sportsId: number;   // FK → Sports.id
+  eventsId: number; // FK → Events.id
+  sportsId: number; // FK → Sports.id
   category: string;
   createdAt: Date;
 }

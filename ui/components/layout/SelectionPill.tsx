@@ -1,0 +1,83 @@
+/**
+ * ui/design-system/primitives/SelectionPill.tsx
+ *
+ * WHAT: Pill-shaped toggle button for single-select lists (events, sports, orgs, categories).
+ *       Supports color variants and shows a checkmark when selected.
+ *
+ * HOW TO USE:
+ *
+ *   import { SelectionPill } from '@/ui/design-system/primitives/SelectionPill'
+ *
+ *   <SelectionPill
+ *     label="បាល់ទាត់"
+ *     isSelected={selected === 'soccer'}
+ *     onClick={() => setSelected('soccer')}
+ *     variant="indigo"   // 'indigo' | 'purple' | 'emerald'
+ *     size="default"     // 'default' | 'sm'
+ *   />
+ *
+ *   // In a grid of options:
+ *   <div className="grid grid-cols-3 gap-3">
+ *     {sports.map(s => (
+ *       <SelectionPill key={s.id} label={s.name}
+ *         isSelected={formData.sportId === s.id}
+ *         onClick={() => setFields({ sportId: s.id })}
+ *         variant="indigo" />
+ *     ))}
+ *   </div>
+ */
+
+'use client';
+
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
+
+const VARIANTS = {
+  indigo: {
+    base:     'border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50',
+    selected: 'border-indigo-500 bg-indigo-600 text-white',
+  },
+  purple: {
+    base:     'border-slate-200 bg-white text-slate-700 hover:border-purple-300 hover:bg-purple-50',
+    selected: 'border-purple-500 bg-purple-600 text-white',
+  },
+  emerald: {
+    base:     'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50',
+    selected: 'border-emerald-500 bg-emerald-600 text-white',
+  },
+} as const;
+
+export interface SelectionPillProps {
+  label: string;
+  isSelected: boolean;
+  onClick: () => void;
+  variant?: keyof typeof VARIANTS;
+  size?: 'default' | 'sm';
+  className?: string;
+  disabled?: boolean;
+}
+
+export function SelectionPill({
+  label, isSelected, onClick,
+  variant = 'indigo', size = 'default',
+  className, disabled,
+}: SelectionPillProps) {
+  const v = VARIANTS[variant];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'flex w-full items-center justify-between gap-2 rounded-full border font-medium transition-all duration-150',
+        size === 'default' ? 'px-4 py-2.5 text-sm' : 'px-3 py-2 text-xs',
+        isSelected ? v.selected : v.base,
+        disabled && 'cursor-not-allowed opacity-50',
+        className,
+      )}
+    >
+      <span>{label}</span>
+      {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+    </button>
+  );
+}
