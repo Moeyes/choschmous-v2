@@ -7,7 +7,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     <>
       <PublicTopBar
         links={[
-          { label: 'Register', href: ROUTES.PUBLIC.REGISTER },
+          { label: 'Register', href: ROUTES.PUBLIC.REGISTER.event },
           { label: 'Survey', href: ROUTES.PUBLIC.SURVEY },
           { label: 'Category', href: ROUTES.PUBLIC.CATEGORY },
         ]}

@@ -1,5 +1,26 @@
+// ============================================================
+// domains/events/events.validators.ts
+// ============================================================
+
 import { z } from 'zod';
-import { requiredString, optionalString, dateSchema, baseFiltersSchema } from '@/lib/validation/base-validators';
-export const createEventSchema  = z.object({ name: requiredString, nameKh: optionalString, description: optionalString, startDate: dateSchema.optional(), endDate: dateSchema.optional(), location: optionalString, isActive: z.boolean().default(true) });
-export const updateEventSchema  = createEventSchema.partial();
-export const eventFiltersSchema = baseFiltersSchema.extend({ isActive: z.coerce.boolean().optional() });
+
+export const createEventSchema = z.object({
+  name: z.string().trim().min(1, 'ត្រូវបញ្ចូលឈ្មោះព្រឹត្តិការណ៍'),
+  date: z.string().refine((val) => !isNaN(new Date(val).getTime()), 'ថ្ងៃខែឆ្នាំមិនត្រឹមត្រូវ'),
+});
+
+export const updateEventSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().trim().min(1).optional(),
+  date: z.string().refine((val) => !isNaN(new Date(val).getTime()), 'ថ្ងៃខែឆ្នាំមិនត្រឹមត្រូវ').optional(),
+});
+
+export const eventFiltersSchema = z.object({
+  status: z.enum(['upcoming', 'ongoing', 'completed']).optional(),
+  search: z.string().optional(),
+  page: z.number().int().min(1).optional().default(1),
+  limit: z.number().int().min(1).max(100).optional().default(20),
+});
+
+export type CreateEventData = z.infer<typeof createEventSchema>;
+export type UpdateEventData = z.infer<typeof updateEventSchema>;

@@ -1,5 +1,64 @@
-import type { BaseFilters } from '@/types/common';
-export type Event = { id: string; name: string; nameKh?: string | null; description?: string | null; startDate?: Date | null; endDate?: Date | null; location?: string | null; isActive: boolean; createdAt: Date; updatedAt: Date };
-export type CreateEventInput = { name: string; nameKh?: string; description?: string; startDate?: Date; endDate?: Date; location?: string; isActive?: boolean };
-export type UpdateEventInput = Partial<CreateEventInput>;
-export type EventFilters    = BaseFilters & { isActive?: boolean };
+// ============================================================
+// domains/events/events.types.ts
+// Derived from: Events + categories tables in ER diagram
+// ============================================================
+
+export type EventStatus = 'upcoming' | 'ongoing' | 'completed';
+
+/** Maps to: Events table */
+export interface Event {
+  id: number;
+  name: string;
+  date: Date;
+  createdAt: Date;
+}
+
+/** Maps to: categories table (join of Events × Sports) */
+export interface Category {
+  id: number;
+  eventsId: number;   // FK → Events.id
+  sportsId: number;   // FK → Sports.id
+  category: string;
+  createdAt: Date;
+}
+
+// ── DTOs ──────────────────────────────────────────────────────
+
+export interface CreateEventInput {
+  name: string;
+  date: string; // ISO date string from client
+}
+
+export interface UpdateEventInput {
+  id: number;
+  name?: string;
+  date?: string;
+}
+
+/** Event enriched with related category/sport data for display */
+export interface EventSummary {
+  id: number;
+  name: string;
+  date: Date;
+  status: EventStatus;
+  sports: EventSportEntry[];
+  createdAt: Date;
+}
+
+export interface EventSportEntry {
+  sportId: number;
+  sportName: string;
+  categoryId: number;
+  category: string;
+}
+
+// ── Filters ───────────────────────────────────────────────────
+
+export interface EventFilters {
+  status?: EventStatus;
+  search?: string;
+  page?: number;
+  limit?: number;
+  isActive?: boolean;
+  take?: number;
+}

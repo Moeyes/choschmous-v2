@@ -1,12 +1,20 @@
 export const ROUTES = {
   PUBLIC: {
-    HOME: '/', 
-    SURVEY: '/survey', 
+    HOME: '/',
+    SURVEY: '/survey',
     CATEGORY: '/category',
-    REGISTER: '/register' 
+    REGISTER: {
+      event: '/register?step=event',
+      organization: '/register?step=organization',
+      sport: '/register?step=sport',
+      category: '/register?step=category',
+      personalInfo: '/register?step=personal-info',
+      confirmation: '/register?step=confirmation',
+      completed: '/register?step=action',
+    },
   },
-  AUTH: { 
-    LOGIN: '/login'
+  AUTH: {
+    LOGIN: '/login',
   },
   ADMIN: {
     ROOT: '/admin',

@@ -1,3 +1,6 @@
 ignoredBuiltDependencies:
+  - '@prisma/cli'
+  - '@prisma/engines'
+  - postgresql
   - sharp
   - unrs-resolver
