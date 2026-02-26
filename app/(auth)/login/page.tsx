@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import { ROUTES } from '@/config/routes';
+// import Link from 'next/link';
+// import { ROUTES } from '@/config/routes';
 
 export default function LoginPage() {
   return (
@@ -13,9 +13,9 @@ export default function LoginPage() {
           <div><label className="block text-sm font-medium mb-1">Password</label><input type="password" className="w-full rounded-md border px-3 py-2 text-sm" /></div>
           <button className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">Sign in</button>
         </div>
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          No account? <Link href={ROUTES.AUTH.REGISTER} className="text-primary hover:underline">Register</Link>
-        </p>
+        {/* <p className="mt-4 text-center text-xs text-muted-foreground">
+          No account? <Link href={ROUTES.} className="text-primary hover:underline">Register</Link>
+        </p> */}
       </div>
     </div>
   );

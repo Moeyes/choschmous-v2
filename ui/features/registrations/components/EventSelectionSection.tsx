@@ -5,9 +5,9 @@ import { EventSelectionClient } from './EventSelectionClient';
 import { prisma } from '@/infrastructure/db';
 
 export async function EventSelectionSection() {
-  // const events = await EventsRepository.list({ isActive: true, take: 100 }).then((res) => res.data);
   const service = new EventsService(new EventsRepository(prisma));
-  const events = (await service.list({ isActive: true, take: 100 })).data;
+  const rawEvents = (await service.list({ isActive: true, take: 100 })).data;
+  const events = rawEvents.map((e) => ({ ...e, id: String(e.id) }));
 
   return (
     <div className="space-y-8">

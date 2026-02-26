@@ -1,9 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import type { ExtendedPrismaClient } from '@/infrastructure/db/prisma';
 import type { ProvinceFilters, CreateProvinceInput, UpdateProvinceInput } from './provinces.types';
 import { toPrismaSkipTake } from '@/lib/utils/transformers';
 
 export class ProvincesRepository {
-  constructor(private db: PrismaClient) {}
+  constructor(private db: ExtendedPrismaClient) {}
+
   async findMany(filters: ProvinceFilters = {}) {
     const { search, ...pagination } = filters;
     const where = search ? { name: { contains: search, mode: 'insensitive' as const } } : {};
@@ -17,16 +18,20 @@ export class ProvincesRepository {
     ]);
     return { data, total };
   }
-  findById(id: string) {
+
+  findById(id: number) {
     return this.db.province.findUnique({ where: { id } });
   }
+
   create(input: CreateProvinceInput) {
     return this.db.province.create({ data: input });
   }
-  update(id: string, input: UpdateProvinceInput) {
+
+  update(id: number, input: UpdateProvinceInput) {
     return this.db.province.update({ where: { id }, data: input });
   }
-  delete(id: string) {
+
+  delete(id: number) {
     return this.db.province.delete({ where: { id } });
   }
 }

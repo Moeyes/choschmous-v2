@@ -3,6 +3,8 @@
 // Derived from: Users table in ER diagram
 // ============================================================
 
+import { Role } from "@/config/index";
+
 export type UserLevel = 0 | 1 | 2; // 0 = public, 1 = admin, 2 = superadmin
 
 export type UserRole = 'superadmin' | 'admin' | 'public';
@@ -40,6 +42,13 @@ export interface LoginInput {
 export interface LoginResult {
   user: SafeUser;
   token: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: Role;
+  name: string;
 }
 
 export function userLevelToRole(level: UserLevel): UserRole {

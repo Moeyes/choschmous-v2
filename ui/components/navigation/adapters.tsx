@@ -1,8 +1,8 @@
-import type { WizardViewModel, WizardStepViewModel } from './types';
+import type { WizardViewModel, WizardStepState } from './types';
 import { CheckCircle2 } from 'lucide-react';
 
 interface WizardLike {
-  stepsWithState: WizardStepViewModel[];
+  stepsWithState: WizardStepState[];
   stepsLength: number;
   goToStep: (index: number) => void;
 }

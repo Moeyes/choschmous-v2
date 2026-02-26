@@ -1,10 +1,3 @@
-// ============================================================
-// domains/provinces/provinces.types.ts
-// Provinces are a subset of Organizations with type = 'province'
-// Kept as separate domain to match route/UI separation in the app
-// ============================================================
-
-/** Province display record */
 export interface Province {
   id: number;
   name: string;
@@ -18,7 +11,6 @@ export interface CreateProvinceInput {
 }
 
 export interface UpdateProvinceInput {
-  id: number;
   name?: string;
   khmerName?: string | null;
 }
@@ -29,7 +21,6 @@ export interface ProvinceFilters {
   limit?: number;
 }
 
-/** Province enriched with participant counts for dashboard */
 export interface ProvinceSummary extends Province {
   totalParticipants: number;
   athletes: number;

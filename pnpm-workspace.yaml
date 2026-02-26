@@ -1,6 +1,8 @@
 ignoredBuiltDependencies:
   - '@prisma/cli'
   - '@prisma/engines'
+  - esbuild
   - postgresql
+  - prisma
   - sharp
   - unrs-resolver

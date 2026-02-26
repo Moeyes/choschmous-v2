@@ -48,8 +48,8 @@ model Enroll {
 
   user          Users     @relation(fields: [userID], references: [userID])
   athletes      Athletes?
-  leaders       Leaders?
-}
+    leaders       Leaders?
+  }
 
 // ── Athletes ──────────────────────────────────────────────────
 
@@ -84,6 +84,12 @@ model Leaders {
 
   enroll             Enroll              @relation(fields: [enrollID], references: [id])
   LeaderParticipat   LeaderParticipat[]
+}
+model Province {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  khmerName  String?
+  createdAt  DateTime @default(now())
 }
 
 // ── Events ────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ export async function GET() {
   try {
     await requireSession();
     const [events, sports, participants, registrations] = await Promise.all([
-      prisma.event.count(), prisma.sport.count(), prisma.participant.count(), prisma.registration.count(),
+      prisma.events.count(), prisma.sports.count(), prisma.athleteParticipat.count(), prisma.athleteParticipat.count(),
     ]);
     return ok({ events, sports, participants, registrations });
   } catch (e) { return handleError(e); }

@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import type { ExtendedPrismaClient } from '@/infrastructure/db/prisma';
 
 import type { EventFilters, CreateEventInput, UpdateEventInput } from './events.types';
 import { toPrismaSkipTake } from '@/lib/utils/transformers';
 
 export class EventsRepository {
-  constructor(private db: PrismaClient) {}
+  constructor(private db: ExtendedPrismaClient) {}
   async findMany(filters: EventFilters = {}) {
     const { search, isActive, ...pagination } = filters;
     const where = {
@@ -12,25 +12,25 @@ export class EventsRepository {
       ...(isActive !== undefined ? { isActive } : {}),
     };
     const [data, total] = await Promise.all([
-      this.db.event.findMany({
+      this.db.events.findMany({
         where,
         ...toPrismaSkipTake(pagination),
         orderBy: { createdAt: 'desc' },
       }),
-      this.db.event.count({ where }),
+      this.db.events.count({ where }),
     ]);
     return { data, total };
   }
   findById(id: string) {
-    return this.db.event.findUnique({ where: { id }, include: { sports: true } });
+    return this.db.events.findUnique({ where: { id: Number(id) } });
   }
   create(input: CreateEventInput) {
-    return this.db.event.create({ data: input });
+    return this.db.events.create({ data: input });
   }
   update(id: string, input: UpdateEventInput) {
-    return this.db.event.update({ where: { id }, data: input });
+    return this.db.events.update({ where: { id: Number(id) }, data: input });
   }
   delete(id: string) {
-    return this.db.event.delete({ where: { id } });
+    return this.db.events.delete({ where: { id: Number(id) } });
   }
 }

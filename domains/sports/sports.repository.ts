@@ -14,9 +14,7 @@ export const sportsRepository = {
     return prisma.sports.findMany({
       where: {
         ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
-        ...(eventId ? {
-          Sports_event_org: { some: { events_id: eventId } }
-        } : {}),
+        ...(eventId ? { Sports_event_org: { some: { events_id: eventId } } } : {}),
       },
       orderBy: { name: 'asc' },
       skip: (page - 1) * limit,
@@ -52,27 +50,31 @@ export const sportsRepository = {
     return prisma.sports.count({
       where: {
         ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
-        ...(eventId ? {
-          Sports_event_org: { some: { events_id: eventId } }
-        } : {}),
+        ...(eventId ? { Sports_event_org: { some: { events_id: eventId } } } : {}),
       },
     });
   },
-
-  // ── Sports_event_org ────────────────────────────────────────
 
   async linkToEventOrg(data: {
     eventsId: number;
     sportsId: number;
     organizationId: number;
   }): Promise<SportEventOrg> {
-    return prisma.sports_event_org.create({
+    const result = await prisma.sports_event_org.create({
       data: {
         events_id: data.eventsId,
         sports_id: data.sportsId,
         organization_id: data.organizationId,
       },
     });
+    // Map Prisma snake_case to SportEventOrg camelCase type
+    return {
+      id: result.id,
+      eventsId: result.events_id,
+      sportsId: result.sports_id,
+      organizationId: result.organization_id,
+      createdAt: result.createdAt,
+    };
   },
 
   async unlinkFromEventOrg(id: number): Promise<void> {

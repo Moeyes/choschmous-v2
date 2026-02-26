@@ -3,7 +3,7 @@ import { Geist } from 'next/font/google';
 import { Toaster } from 'sonner';
 import './globals.css';
 
-const geist = Geist({ subsets: ['latin'] });
+// const geist = Geist({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Choschmous',
   description: 'Sports Registration Management System',
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressContentEditableWarning className={geist.className}>
+      <body>
         {children}
         <Toaster richColors position="top-right" />
       </body>

@@ -16,11 +16,24 @@ export const registrationsRepository = {
   // ── Enroll ──────────────────────────────────────────────────
 
   async createEnroll(data: Omit<Enroll, 'id' | 'createdAt'>): Promise<Enroll> {
-    return prisma.enroll.create({ data });
+    const result = await prisma.enroll.create({ data: {
+      userID: data.userID,
+      name: data.name,
+      gender: data.gender,
+      nationality: data.nationality,
+      dob: data.dob,
+      idDocType: data.idDocType,
+      address: data.address,
+      photoPath: data.photoPath,
+      DocumentsPath: data.documentsPath,
+    }});
+    return { ...result, gender: result.gender as Gender, documentsPath: result.DocumentsPath };
   },
 
   async findEnrollById(id: number): Promise<Enroll | null> {
-    return prisma.enroll.findUnique({ where: { id } });
+    const result = await prisma.enroll.findUnique({ where: { id } });
+    if (!result) return null;
+    return { ...result, gender: result.gender as Gender, documentsPath: result.DocumentsPath };
   },
 
   // ── Athletes ─────────────────────────────────────────────────
@@ -52,7 +65,6 @@ export const registrationsRepository = {
   async findAll(filters: RegistrationFilters): Promise<Registration[]> {
     const { eventId, sportId, organizationId, role, gender, search, page = 1, limit = 20 } = filters;
 
-    // Athletes query
     const athleteWhere = {
       ...(eventId ? { eventsID: eventId } : {}),
       ...(sportId ? { sportsID: sportId } : {}),
@@ -60,11 +72,7 @@ export const registrationsRepository = {
       athletes: {
         enroll: {
           ...(gender ? { gender } : {}),
-          ...(search ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' as const } },
-            ],
-          } : {}),
+          ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] } : {}),
         },
       },
     };
@@ -92,7 +100,6 @@ export const registrationsRepository = {
         : Promise.resolve([]),
     ]);
 
-    // Map to unified Registration shape
     const athleteRegistrations: Registration[] = athletes.map((ap) => ({
       enrollId: ap.athletes.enroll.id,
       name: ap.athletes.enroll.name,
@@ -103,7 +110,7 @@ export const registrationsRepository = {
       photoPath: ap.athletes.enroll.photoPath,
       documentsPath: ap.athletes.enroll.DocumentsPath,
       role: 'Athlete',
-      status: 'pending', // extend with status field when added to schema
+      status: 'pending',
       athleteClass: ap.athletes.class,
       athleteCategory: ap.athletes.enroll.gender as Gender,
       leaderRole: null,

@@ -18,7 +18,7 @@ export function useEventSelection() {
     sessionStorage.setItem('selectedEventId', eventId);
 
     setTimeout(() => {
-      router.push(ROUTES.registration.organization);
+      router.push(ROUTES.PUBLIC.REGISTER.organization);
     }, 300);
   };
 
