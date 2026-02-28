@@ -2,7 +2,7 @@ export const ROUTES = {
   PUBLIC: {
     HOME: '/',
     SURVEY: '/survey',
-    CATEGORY: '/category',
+    BYNUMBER: '/bynumber',
     REGISTER: {
       event: '/register?step=event',
       organization: '/register?step=organization',

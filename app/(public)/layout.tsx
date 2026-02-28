@@ -9,7 +9,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         links={[
           { label: 'Register', href: ROUTES.PUBLIC.REGISTER.event },
           { label: 'Survey', href: ROUTES.PUBLIC.SURVEY },
-          { label: 'Category', href: ROUTES.PUBLIC.CATEGORY },
+          { label: 'By Number', href: ROUTES.PUBLIC.BYNUMBER },
         ]}
       />
       {children}
