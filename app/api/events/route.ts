@@ -1,21 +1,27 @@
-// ============================================================
-// app/api/events/route.ts
-// No longer instantiates Prisma — EventsRepository calls backend directly
-// ============================================================
-
 import { NextRequest } from 'next/server';
 import { EventsService } from '@/domains/events';
 import { EventsRepository } from '@/domains/events/events.repository';
-import { eventFiltersSchema } from '@/domains/events/events.validators';
 import { ok, created, handleError } from '@/lib/api/response';
+import { z } from 'zod';
 
 const service = new EventsService(new EventsRepository());
 
+const filtersSchema = z.object({
+  page:   z.coerce.number().int().min(1).optional().default(1),
+  limit:  z.coerce.number().int().min(1).max(500).optional().default(20),
+  skip:   z.coerce.number().int().min(0).optional(),
+  status: z.enum(['upcoming', 'ongoing', 'completed']).optional(),
+  search: z.string().optional(),
+});
+
 export async function GET(req: NextRequest) {
   try {
-    const r = await service.list(
-      eventFiltersSchema.parse(Object.fromEntries(req.nextUrl.searchParams))
-    );
+    const p = filtersSchema.parse(Object.fromEntries(req.nextUrl.searchParams));
+    // support ?skip= (used by survey UI) alongside ?page=
+    if (p.skip !== undefined) {
+      p.page = Math.floor(p.skip / p.limit) + 1;
+    }
+    const r = await service.list(p);
     return ok(r.data, r.meta);
   } catch (e) {
     return handleError(e);

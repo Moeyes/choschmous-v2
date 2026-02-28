@@ -18,8 +18,8 @@ export const updateEventSchema = z.object({
 export const eventFiltersSchema = z.object({
   status: z.enum(['upcoming', 'ongoing', 'completed']).optional(),
   search: z.string().optional(),
-  page: z.number().int().min(1).optional().default(1),
-  limit: z.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
 export type CreateEventData = z.infer<typeof createEventSchema>;
