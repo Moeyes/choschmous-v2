@@ -7,27 +7,39 @@ import { CheckCircle2 } from 'lucide-react';
 export interface WizardStep {
   key: string;
   label: string;
-  icon?: ComponentType<SVGProps<SVGSVGElement>>; // optional icon for step
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
   component: ReactNode;
   validate?: () => boolean;
 }
 
-export function useStepWizard(steps: WizardStep[], initialStep = 0) {
+export function useStepWizard(
+  steps: WizardStep[],
+  initialStep = 0,
+  onStepChange?: (index: number) => void
+) {
   const [activeIndex, setActiveIndex] = useState(initialStep);
 
+  const setStep = useCallback(
+    (index: number) => {
+      setActiveIndex(index);
+      onStepChange?.(index);
+    },
+    [onStepChange]
+  );
+
   const nextStep = useCallback(() => {
-    setActiveIndex((i) => Math.min(i + 1, steps.length - 1));
-  }, [steps.length]);
+    setStep(Math.min(activeIndex + 1, steps.length - 1));
+  }, [activeIndex, steps.length, setStep]);
 
   const prevStep = useCallback(() => {
-    setActiveIndex((i) => Math.max(i - 1, 0));
-  }, []);
+    setStep(Math.max(activeIndex - 1, 0));
+  }, [activeIndex, setStep]);
 
   const goToStep = useCallback(
     (index: number) => {
-      if (index >= 0 && index < steps.length) setActiveIndex(index);
+      if (index >= 0 && index < steps.length) setStep(index);
     },
-    [steps.length]
+    [steps.length, setStep]
   );
 
   const stepsWithState = steps.map((step, idx) => ({
@@ -36,7 +48,7 @@ export function useStepWizard(steps: WizardStep[], initialStep = 0) {
     isActive: idx === activeIndex,
     isCompleted: idx < activeIndex,
     isAccessible: idx <= activeIndex,
-    icon: step.icon || CheckCircle2, // fallback icon
+    icon: step.icon || CheckCircle2,
   }));
 
   return {

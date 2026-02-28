@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Calendar,
@@ -26,6 +26,7 @@ import {
   ConfirmationStep,
   CompletedStep,
 } from '@/ui/features/registrations/components/steps';
+import { ROUTES } from '@/config/routes';
 
 interface Event {
   id: string;
@@ -46,15 +47,20 @@ const LABELS = [
   'បញ្ជាក់',
   'បញ្ចប់',
 ];
-const KEYS = [
-  'events',
-  'organization',
-  'sport',
-  'category',
-  'personal-info',
-  'confirmation',
-  'action',
-];
+
+// Maps index → ROUTES.PUBLIC.REGISTER step values
+const STEP_ROUTES = [
+  ROUTES.PUBLIC.REGISTER.event, // ?step=event
+  ROUTES.PUBLIC.REGISTER.organization, // ?step=organization
+  ROUTES.PUBLIC.REGISTER.sport, // ?step=sport
+  ROUTES.PUBLIC.REGISTER.category, // ?step=category
+  ROUTES.PUBLIC.REGISTER.personalInfo, // ?step=personal-info
+  ROUTES.PUBLIC.REGISTER.confirmation, // ?step=confirmation
+  ROUTES.PUBLIC.REGISTER.completed, // ?step=action
+] as const;
+
+// Extract just the step value from each route string (e.g. 'event', 'organization', ...)
+const STEP_KEYS = STEP_ROUTES.map((r) => new URLSearchParams(r.split('?')[1]).get('step') ?? '');
 
 export function RegistrationWizard({
   events,
@@ -64,23 +70,45 @@ export function RegistrationWizard({
   eventsLoading?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Derive initial step index from ?step= URL param
+  const stepParam = searchParams.get('step');
+  const initialStep = stepParam ? Math.max(STEP_KEYS.indexOf(stepParam), 0) : 0;
+
   const { formData, setFields, resetPersonal } = useRegistration();
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [enrollId, setEnrollId] = useState<number | null>(null);
 
   const currentEvent = events.filter(Boolean).find((e) => e && e.id === formData.eventId);
-  const sports = (currentEvent?.sports ?? []) as any[];
 
   const steps = LABELS.map((label, i) => ({
-    key: KEYS[i],
+    key: STEP_KEYS[i],
     label,
     icon: ICONS[i],
     component: null as any,
   }));
-  const wizard = useStepWizard(steps);
 
-  // override lets EventStep (and others) pass freshly-selected values
-  // before React has flushed the setFields state update
+  // Sync URL whenever the active step changes
+  const handleStepChange = useCallback(
+    (index: number) => {
+      router.replace(STEP_ROUTES[index], { scroll: false });
+    },
+    [router]
+  );
+
+  const wizard = useStepWizard(steps, initialStep, handleStepChange);
+
+  // If user navigates back/forward in browser, sync wizard to URL
+  useEffect(() => {
+    const param = searchParams.get('step');
+    const idx = param ? STEP_KEYS.indexOf(param) : 0;
+    if (idx !== -1 && idx !== wizard.activeIndex) {
+      wizard.goToStep(idx);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const attemptNext = useCallback(
     (override?: Partial<RegistrationFormData>) => {
       const merged = override ? { ...formData, ...override } : formData;
@@ -111,7 +139,7 @@ export function RegistrationWizard({
       case 1:
         return <OrganizationStep {...p} />;
       case 2:
-        return <SportStep {...p}  />;
+        return <SportStep {...p} />;
       case 3:
         return <CategoryStep {...p} />;
       case 4:
@@ -157,7 +185,7 @@ export function RegistrationWizard({
         activeIndex={wizard.activeIndex}
         gotoStep={goToStep}
         gotoStepByKey={(key) => {
-          const i = KEYS.indexOf(key);
+          const i = STEP_KEYS.indexOf(key);
           if (i !== -1) goToStep(i);
         }}
         prevStep={wizard.prevStep}

@@ -8,11 +8,3 @@ export { SportStep } from '@/ui/features/registrations/components/steps/Sportste
 export { PersonalInfoStep } from '@/ui/features/registrations/components/steps/Personalinfostep';
 export { ConfirmationStep } from '@/ui/features/registrations/components/steps/Confirmationstep';
 export { CompletedStep } from '@/ui/features/registrations/components/steps/Completedstep';
-// export { CompletedStep } from '@/ui/features/registrations/components/steps/Completedstep';
-
-// export { EventStep } from './Eventstep';
-// export { SportStep } from './SportStep';
-// export { CategoryStep } from './CategoryStep';
-// export { PersonalInfoStep } from './PersonalInfoStep';
-// export { ConfirmationStep } from './ConfirmationStep';
-// export { CompletedStep } from './CompletedStep';
