@@ -10,7 +10,7 @@ const API = `${BACKEND_URL}/api`;
 function mapCategory(c: any) {
   return {
     id: c.id,
-    name: c.name_kh ?? c.name ?? '',
+    name: c.category ?? '',
   };
 }
 

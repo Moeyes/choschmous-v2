@@ -7,16 +7,14 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   async rewrites() {
     if (!backendApiBaseUrl) return [];
-
-    // `beforeFiles` ensures proxying happens before local `app/api/*` handlers.
     return {
-      beforeFiles: [
+      beforeFiles: [],
+      afterFiles: [
         {
           source: "/api/:path*",
-          destination: `${backendApiBaseUrl}/:path*`,
+          destination: `${backendApiBaseUrl}/api/:path*`,
         },
       ],
-      afterFiles: [],
       fallback: [],
     };
   },

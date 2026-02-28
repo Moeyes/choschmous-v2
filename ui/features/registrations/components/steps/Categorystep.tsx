@@ -25,7 +25,7 @@ export function CategoryStep({ formData, setFields, errors, onNext }: StepProps)
 
     const controller = new AbortController();
 
-    fetch(`/api/categories/?sport_id=${formData.sportId}&skip=0&limit=100`, {
+    fetch(`/api/categories?sport_id=${formData.sportId}&skip=0&limit=100`, {
       signal: controller.signal,
     })
       .then((r) => {
