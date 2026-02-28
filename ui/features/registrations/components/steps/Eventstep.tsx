@@ -1,9 +1,11 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ChevronLeft } from 'lucide-react';
 import { Skeleton } from '@/ui/design-system/primitives/Skeleton';
 import { StepHeader, Grid } from '@/ui/components/layout/LayoutPrimitives';
 import type { StepProps, Event } from '../../types/Registration.types';
+// Uses .event-card, .event-card-title, .event-card-text, .event-card-check from globals.css
 
 // ─── Props ────────────────────────────────────────────────────
 
@@ -22,40 +24,128 @@ export function EventStep({
   errors,
   onNext,
 }: EventStepProps) {
-  const handleSelect = (event: Event) => {
-    setFields({ eventId: event.id, eventName: event.name });
-    setTimeout(onNext, 250);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  // Derive unique types from events
+  const types = Array.from(
+    new Set(
+      events
+        .filter((e) => !!e && e.id != null)
+        .map((e) => (e as any).type)
+        .filter(Boolean)
+    )
+  ) as string[];
+
+  // Events filtered by selected type
+  const filteredEvents = selectedType ? events.filter((e) => (e as any).type === selectedType) : [];
+
+  const handleSelectType = (type: string) => {
+    setSelectedType(type);
+    // Clear previously selected event if type changes
+    setFields({ eventId: '', eventName: '' });
+  };
+
+  const handleSelectEvent = (event: Event) => {
+    const fields = { eventId: String(event.id), eventName: event.name };
+    setFields(fields);
+    (onNext as any)(fields);
   };
 
   return (
     <div className="space-y-6">
-      <StepHeader title="ជ្រើសរើសព្រឹត្តិការណ៍" subtitle="ជ្រើសរើសព្រឹត្តិការណ៍ដែលអ្នកចង់ចូលរួម" />
+      {!selectedType ? (
+        // ── Phase 1: Pick event type ──
+        <>
+          <StepHeader
+            title="ជ្រើសរើសប្រភេទព្រឹត្តិការណ៍"
+            subtitle="ជ្រើសរើសប្រភេទព្រឹត្តិការណ៍ដែលអ្នកចង់ចូលរួម"
+          />
 
-      {loading ? (
-        <LoadingGrid />
-      ) : events.length === 0 ? (
-        <EmptyState />
+          {loading ? (
+            <LoadingGrid />
+          ) : types.length === 0 ? (
+            <EmptyState message="មិនមានព្រឹត្តិការណ៍" />
+          ) : (
+            <Grid cols={2}>
+              {types.map((type) => (
+                <TypeCard
+                  key={type}
+                  type={type}
+                  count={events.filter((e) => (e as any).type === type).length}
+                  onSelect={handleSelectType}
+                />
+              ))}
+            </Grid>
+          )}
+        </>
       ) : (
-        <Grid cols={2}>
-          {events
-            .filter((event): event is Event => !!event && typeof event.id === 'string')
-            .map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                isSelected={formData.eventId === event.id}
-                onSelect={handleSelect}
-              />
-            ))}
-        </Grid>
+        // ── Phase 2: Pick specific event ──
+        <>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedType(null)}
+              className="flex items-center gap-1 text-sm"
+              style={{ color: 'var(--reg-indigo-600)' }}
+            >
+              <ChevronLeft style={{ width: '1rem', height: '1rem' }} />
+              ត្រលប់
+            </button>
+            <span style={{ color: 'var(--reg-slate-300)' }}>|</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--reg-slate-700)' }}>
+              {selectedType}
+            </span>
+          </div>
+
+          <StepHeader
+            title="ជ្រើសរើសព្រឹត្តិការណ៍"
+            subtitle="ជ្រើសរើសព្រឹត្តិការណ៍ដែលអ្នកចង់ចូលរួម"
+          />
+
+          {filteredEvents.length === 0 ? (
+            <EmptyState message="មិនមានព្រឹត្តិការណ៍ក្នុងប្រភេទនេះ" />
+          ) : (
+            <Grid cols={2}>
+              {filteredEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  isSelected={formData.eventId === String(event.id)}
+                  onSelect={handleSelectEvent}
+                />
+              ))}
+            </Grid>
+          )}
+        </>
       )}
 
-      {errors.eventId && <p className="text-xs text-red-600">{errors.eventId}</p>}
+      {errors.eventId && (
+        <p className="text-xs" style={{ color: 'var(--destructive)' }}>
+          {errors.eventId}
+        </p>
+      )}
     </div>
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────
+// ─── TypeCard ─────────────────────────────────────────────────
+
+interface TypeCardProps {
+  type: string;
+  count: number;
+  onSelect: (type: string) => void;
+}
+
+function TypeCard({ type, count, onSelect }: TypeCardProps) {
+  return (
+    <button type="button" onClick={() => onSelect(type)} className="event-card group text-left">
+      <h3 className="event-card-title">{type}</h3>
+      <p className="event-card-text mt-2 text-sm">{count} ព្រឹត្តិការណ៍</p>
+    </button>
+  );
+}
+
+// ─── EventCard ────────────────────────────────────────────────
 
 interface EventCardProps {
   event: Event;
@@ -68,33 +158,30 @@ function EventCard({ event, isSelected, onSelect }: EventCardProps) {
     <button
       type="button"
       onClick={() => onSelect(event)}
-      className={[
-        'relative rounded-2xl border-2 p-5 text-left transition-all',
-        isSelected
-          ? 'border-indigo-500 bg-indigo-50 shadow-md'
-          : 'border-slate-200 bg-white hover:border-indigo-200',
-      ].join(' ')}
+      className={`event-card group${isSelected ? 'selected' : ''}`}
     >
-      {isSelected && <SelectedBadge />}
+      {isSelected && (
+        <div className="event-card-check">
+          <Check style={{ width: '0.875rem', height: '0.875rem', color: 'white' }} />
+        </div>
+      )}
 
-      <h3
-        className={`text-base font-semibold ${isSelected ? 'text-indigo-900' : 'text-slate-900'}`}
-      >
-        {event.name}
-      </h3>
+      <h3 className={`event-card-title${isSelected ? 'selected' : ''}`}>{event.name}</h3>
 
       {event.startDate && (
-        <p className="mt-2 text-sm text-slate-500">
-          {new Date(event.startDate).toLocaleDateString()}
+        <p className="event-card-text mt-2 text-sm">
+          {new Date(event.startDate).toLocaleDateString('km-KH', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })}
         </p>
       )}
 
-      {event.location && <p className="mt-1 text-sm text-slate-500">📍 {event.location}</p>}
+      {event.location && <p className="event-card-text mt-1 text-sm">📍 {event.location}</p>}
 
       {event.sports && event.sports.length > 0 && (
-        <p
-          className={`mt-3 text-xs font-medium ${isSelected ? 'text-indigo-600' : 'text-slate-400'}`}
-        >
+        <p className={`event-card-text text-xs font-medium mt-3${isSelected ? 'selected' : ''}`}>
           {event.sports.length} កីឡា
         </p>
       )}
@@ -102,24 +189,22 @@ function EventCard({ event, isSelected, onSelect }: EventCardProps) {
   );
 }
 
-function SelectedBadge() {
-  return (
-    <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600">
-      <Check className="h-3.5 w-3.5 text-white" />
-    </div>
-  );
-}
+// ─── Shared ───────────────────────────────────────────────────
 
 function LoadingGrid() {
   return (
     <Grid cols={2}>
       {[1, 2, 3, 4].map((i) => (
-        <Skeleton key={i} className="h-40 rounded-2xl" />
+        <Skeleton key={i} className="h-36 rounded-2xl" />
       ))}
     </Grid>
   );
 }
 
-function EmptyState() {
-  return <p className="py-10 text-center text-slate-500">មិនមានព្រឹត្តិការណ៍</p>;
+function EmptyState({ message }: { message: string }) {
+  return (
+    <p className="py-10 text-center" style={{ color: 'var(--reg-slate-600)' }}>
+      {message}
+    </p>
+  );
 }

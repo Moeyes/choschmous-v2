@@ -25,7 +25,7 @@ import type {
 // ── API response shapes (used by step props) ──────────────────
 
 export interface Event {
-  id: string;
+  id: number | string;
   name: string;
   startDate?: string;
   endDate?: string;

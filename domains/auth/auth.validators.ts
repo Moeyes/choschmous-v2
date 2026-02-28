@@ -1,2 +1,13 @@
+// ============================================================
+// domains/auth/auth.validators.ts
+// Backend login uses username + password (not email)
+// ============================================================
+
 import { z } from 'zod';
-export const loginSchema = z.object({ email: z.string().email(), password: z.string().min(6) });
+
+export const loginSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export type LoginSchema = z.infer<typeof loginSchema>;

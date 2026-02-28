@@ -1,8 +1,5 @@
 // ============================================================
 // prisma/schema.prisma
-// Aligned with ER diagram: Users, Enroll, Athletes, Leaders,
-// AthleteParticipat, LeaderParticipat, Sports, Events,
-// categories, Sports_event_org, Organization, Medals
 // ============================================================
 
 generator client {
@@ -11,6 +8,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ── Users ─────────────────────────────────────────────────────
@@ -23,10 +21,10 @@ model Users {
   photoPath String?
   createdAt DateTime @default(now())
 
-  Enroll    Enroll[]
+  Enroll Enroll[]
 }
 
-// ── Enroll (base participant record) ─────────────────────────
+// ── Enroll ────────────────────────────────────────────────────
 
 enum IdDocType {
   IDCard
@@ -37,7 +35,7 @@ model Enroll {
   id            Int       @id @default(autoincrement())
   userID        Int
   name          String
-  gender        String    // 'Male' | 'Female'
+  gender        String
   nationality   String
   dob           DateTime
   idDocType     IdDocType
@@ -46,22 +44,22 @@ model Enroll {
   DocumentsPath String?
   createdAt     DateTime  @default(now())
 
-  user          Users     @relation(fields: [userID], references: [userID])
-  athletes      Athletes?
-    leaders       Leaders?
-  }
+  user     Users     @relation(fields: [userID], references: [userID])
+  athletes Athletes?
+  leaders  Leaders?
+}
 
 // ── Athletes ──────────────────────────────────────────────────
 
 model Athletes {
   id          Int      @id @default(autoincrement())
-  enrollID    Int      @unique // 1:1 with Enroll
+  enrollID    Int      @unique
   class       String?
   uniformSize String?
   createdAt   DateTime @default(now())
 
-  enroll               Enroll                 @relation(fields: [enrollID], references: [id])
-  AthleteParticipat    AthleteParticipat[]
+  enroll            Enroll              @relation(fields: [enrollID], references: [id])
+  AthleteParticipat AthleteParticipat[]
 }
 
 // ── Leaders ───────────────────────────────────────────────────
@@ -77,29 +75,33 @@ enum LeaderRole {
 
 model Leaders {
   id          Int        @id @default(autoincrement())
-  enrollID    Int        @unique // 1:1 with Enroll
+  enrollID    Int        @unique
   roles       LeaderRole
   phoneNumber String     @unique
   createdAt   DateTime   @default(now())
 
-  enroll             Enroll              @relation(fields: [enrollID], references: [id])
-  LeaderParticipat   LeaderParticipat[]
+  enroll           Enroll            @relation(fields: [enrollID], references: [id])
+  LeaderParticipat LeaderParticipat[]
 }
+
+// ── Province ──────────────────────────────────────────────────
+
 model Province {
-  id         Int      @id @default(autoincrement())
-  name       String   @unique
-  khmerName  String?
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  khmerName String?
+  createdAt DateTime @default(now())
 }
 
 // ── Events ────────────────────────────────────────────────────
 
-model Events{
+model Events {
   id        Int      @id @default(autoincrement())
   name      String
   date      DateTime
-  createdAt DateTime @default(now())
   isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
   categories        categories[]
   AthleteParticipat AthleteParticipat[]
   LeaderParticipat  LeaderParticipat[]
@@ -131,7 +133,7 @@ model Organization {
   Sports_event_org  Sports_event_org[]
 }
 
-// ── categories (Events × Sports join) ────────────────────────
+// ── categories ────────────────────────────────────────────────
 
 model categories {
   id        Int      @id @default(autoincrement())
@@ -145,7 +147,7 @@ model categories {
   AthleteParticipat AthleteParticipat[]
 }
 
-// ── Sports_event_org (Sports × Events × Org join) ────────────
+// ── Sports_event_org ──────────────────────────────────────────
 
 model Sports_event_org {
   id              Int      @id @default(autoincrement())
@@ -203,11 +205,11 @@ enum MedalType {
 }
 
 model Medals {
-  id                  Int       @id @default(autoincrement())
-  athletesParticipID  Int
-  medals_type         MedalType
-  key_performance     String?
-  createdAt           DateTime  @default(now())
+  id                 Int       @id @default(autoincrement())
+  athletesParticipID Int
+  medals_type        MedalType
+  key_performance    String?
+  createdAt          DateTime  @default(now())
 
   athleteParticipat AthleteParticipat @relation(fields: [athletesParticipID], references: [id])
 }

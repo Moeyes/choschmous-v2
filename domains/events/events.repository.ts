@@ -1,41 +1,79 @@
-import type { ExtendedPrismaClient } from '@/infrastructure/db/prisma';
+// ============================================================
+// domains/events/events.repository.ts
+// Calls FastAPI backend — no Prisma
+// ============================================================
 
 import type { EventFilters, CreateEventInput, UpdateEventInput } from './events.types';
-import { toPrismaSkipTake } from '@/lib/utils/transformers';
+
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const API = `${BACKEND_URL}/api`;
+
+// Maps raw FastAPI response shape → internal Event shape
+function mapEvent(e: any) {
+  return {
+    id: e.id,
+    name: e.name_kh ?? e.name ?? '',
+    type: e.type,
+    createdAt: e.created_at,
+  };
+}
 
 export class EventsRepository {
-  constructor(private db: ExtendedPrismaClient) {}
   async findMany(filters: EventFilters = {}) {
-    const { search, isActive, ...pagination } = filters;
-    const where = {
-      ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}),
-      ...(isActive !== undefined ? { isActive } : {}),
+    const { page = 1, limit = 20 } = filters;
+    const skip = (page - 1) * limit;
+
+    const res = await fetch(`${API}/events/?skip=${skip}&limit=${limit}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(`Backend ${res.status}: ${JSON.stringify(body)}`);
+    }
+
+    const json = await res.json();
+    return {
+      data: (json.data ?? []).map(mapEvent),
+      total: json.count ?? 0,
     };
-    const [data, total] = await Promise.all([
-      this.db.events.findMany({
-        where,
-        ...toPrismaSkipTake(pagination),
-        orderBy: { createdAt: 'desc' },
-        include: {
-          categories: {
-            include: { sports: true },
-          },
-        },
-      }),
-      this.db.events.count({ where }),
-    ]);
-    return { data, total };
   }
-  findById(id: string) {
-    return this.db.events.findUnique({ where: { id: Number(id) } });
+
+  async findById(id: string) {
+    const res = await fetch(`${API}/events/${id}`);
+    if (!res.ok) return null;
+    const e = await res.json();
+    return mapEvent(e);
   }
-  create(input: CreateEventInput) {
-    return this.db.events.create({ data: input });
+
+  async create(input: CreateEventInput) {
+    const res = await fetch(`${API}/events/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create event' }));
+      throw new Error(err.detail ?? 'Failed to create event');
+    }
+    return mapEvent(await res.json());
   }
-  update(id: string, input: UpdateEventInput) {
-    return this.db.events.update({ where: { id: Number(id) }, data: input });
+
+  async update(id: string, input: UpdateEventInput) {
+    const res = await fetch(`${API}/events/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update event' }));
+      throw new Error(err.detail ?? 'Failed to update event');
+    }
+    return mapEvent(await res.json());
   }
-  delete(id: string) {
-    return this.db.events.delete({ where: { id: Number(id) } });
+
+  async delete(id: string) {
+    const res = await fetch(`${API}/events/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to delete event' }));
+      throw new Error(err.detail ?? 'Failed to delete event');
+    }
   }
 }

@@ -1,166 +1,153 @@
 // ============================================================
 // domains/registrations/registrations.repository.ts
-// All Prisma queries for the Registrations domain
-// Covers: Enroll + Athletes/Leaders + participation junction tables
+// Calls FastAPI backend — no Prisma
 // ============================================================
 
-import { prisma } from '@/infrastructure/db/prisma';
 import type {
   Enroll, Athlete, Leader,
   AthleteParticipation, LeaderParticipation,
   Registration, RegistrationFilters, Gender, IdDocType, LeaderRole,
 } from './registrations.types';
 
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const API = `${BACKEND_URL}/api/v1`;
+
 export const registrationsRepository = {
 
   // ── Enroll ──────────────────────────────────────────────────
 
   async createEnroll(data: Omit<Enroll, 'id' | 'createdAt'>): Promise<Enroll> {
-    const result = await prisma.enroll.create({ data: {
-      userID: data.userID,
-      name: data.name,
-      gender: data.gender,
-      nationality: data.nationality,
-      dob: data.dob,
-      idDocType: data.idDocType,
-      address: data.address,
-      photoPath: data.photoPath,
-      DocumentsPath: data.documentsPath,
-    }});
+    const res = await fetch(`${API}/enrollments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userID: data.userID,
+        name: data.name,
+        gender: data.gender,
+        nationality: data.nationality,
+        dob: data.dob,
+        idDocType: data.idDocType,
+        address: data.address,
+        photoPath: data.photoPath,
+        DocumentsPath: data.documentsPath,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create enrollment' }));
+      throw new Error(err.detail ?? 'Failed to create enrollment');
+    }
+    const result = await res.json();
     return { ...result, gender: result.gender as Gender, documentsPath: result.DocumentsPath };
   },
 
   async findEnrollById(id: number): Promise<Enroll | null> {
-    const result = await prisma.enroll.findUnique({ where: { id } });
-    if (!result) return null;
+    const res = await fetch(`${API}/enrollments/${id}`);
+    if (!res.ok) return null;
+    const result = await res.json();
     return { ...result, gender: result.gender as Gender, documentsPath: result.DocumentsPath };
   },
 
   // ── Athletes ─────────────────────────────────────────────────
+  // NOTE: Your backend doesn't have /athletes routes yet.
+  // These are placeholders — add the routes to your backend when ready.
 
   async createAthlete(data: Omit<Athlete, 'id' | 'createdAt'>): Promise<Athlete> {
-    return prisma.athletes.create({ data: { enrollID: data.enrollID, class: data.class, uniformSize: data.uniformSize } });
+    const res = await fetch(`${API}/athletes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create athlete' }));
+      throw new Error(err.detail ?? 'Failed to create athlete');
+    }
+    return res.json();
   },
 
   async createAthleteParticipation(
     data: Omit<AthleteParticipation, 'id' | 'createdAt'>
   ): Promise<AthleteParticipation> {
-    return prisma.athleteParticipat.create({ data });
+    const res = await fetch(`${API}/athletes/participations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create athlete participation' }));
+      throw new Error(err.detail ?? 'Failed to create athlete participation');
+    }
+    return res.json();
   },
 
   // ── Leaders ──────────────────────────────────────────────────
 
   async createLeader(data: Omit<Leader, 'id' | 'createdAt'>): Promise<Leader> {
-    return prisma.leaders.create({ data: { enrollID: data.enrollID, roles: data.roles, phoneNumber: data.phoneNumber } });
+    const res = await fetch(`${API}/leaders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create leader' }));
+      throw new Error(err.detail ?? 'Failed to create leader');
+    }
+    return res.json();
   },
 
   async createLeaderParticipation(
     data: Omit<LeaderParticipation, 'id' | 'createdAt'>
   ): Promise<LeaderParticipation> {
-    return prisma.leaderParticipat.create({ data });
+    const res = await fetch(`${API}/leaders/participations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create leader participation' }));
+      throw new Error(err.detail ?? 'Failed to create leader participation');
+    }
+    return res.json();
   },
 
   // ── Queries ───────────────────────────────────────────────────
 
   async findAll(filters: RegistrationFilters): Promise<Registration[]> {
-    const { eventId, sportId, organizationId, role, gender, search, page = 1, limit = 20 } = filters;
+    const { page = 1, limit = 20 } = filters;
+    const skip = (page - 1) * limit;
 
-    const athleteWhere = {
-      ...(eventId ? { eventsID: eventId } : {}),
-      ...(sportId ? { sportsID: sportId } : {}),
-      ...(organizationId ? { organizationID: organizationId } : {}),
-      athletes: {
-        enroll: {
-          ...(gender ? { gender } : {}),
-          ...(search ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }] } : {}),
-        },
-      },
-    };
+    // Backend has /enrollments — fetch them and map to Registration shape
+    const res = await fetch(`${API}/enrollments?skip=${skip}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to fetch registrations');
 
-    const [athletes, leaders] = await Promise.all([
-      role !== 'Leader'
-        ? prisma.athleteParticipat.findMany({
-            where: athleteWhere,
-            include: { athletes: { include: { enroll: true } }, events: true, sports: true, organization: true, categories: true },
-            skip: (page - 1) * limit,
-            take: limit,
-          })
-        : Promise.resolve([]),
-      role !== 'Athlete'
-        ? prisma.leaderParticipat.findMany({
-            where: {
-              ...(eventId ? { eventsID: eventId } : {}),
-              ...(sportId ? { sportsID: sportId } : {}),
-              ...(organizationId ? { organizationID: organizationId } : {}),
-            },
-            include: { leaders: { include: { enroll: true } }, events: true, sports: true, organization: true },
-            skip: (page - 1) * limit,
-            take: limit,
-          })
-        : Promise.resolve([]),
-    ]);
+    const json = await res.json();
 
-    const athleteRegistrations: Registration[] = athletes.map((ap) => ({
-      enrollId: ap.athletes.enroll.id,
-      name: ap.athletes.enroll.name,
-      gender: ap.athletes.enroll.gender as Gender,
-      nationality: ap.athletes.enroll.nationality,
-      dob: ap.athletes.enroll.dob,
-      idDocType: ap.athletes.enroll.idDocType as IdDocType,
-      photoPath: ap.athletes.enroll.photoPath,
-      documentsPath: ap.athletes.enroll.DocumentsPath,
-      role: 'Athlete',
-      status: 'pending',
-      athleteClass: ap.athletes.class,
-      athleteCategory: ap.athletes.enroll.gender as Gender,
-      leaderRole: null,
-      phoneNumber: null,
-      eventId: ap.eventsID,
-      sportId: ap.sportsID,
-      categoryId: ap.categoriesID,
-      organizationId: ap.organizationID,
-      createdAt: ap.createdAt,
-    }));
-
-    const leaderRegistrations: Registration[] = leaders.map((lp) => ({
-      enrollId: lp.leaders.enroll.id,
-      name: lp.leaders.enroll.name,
-      gender: lp.leaders.enroll.gender as Gender,
-      nationality: lp.leaders.enroll.nationality,
-      dob: lp.leaders.enroll.dob,
-      idDocType: lp.leaders.enroll.idDocType as IdDocType,
-      photoPath: lp.leaders.enroll.photoPath,
-      documentsPath: lp.leaders.enroll.DocumentsPath,
-      role: 'Leader',
+    return json.data.map((item: any): Registration => ({
+      enrollId: item.id,
+      name: item.name,
+      gender: item.gender as Gender,
+      nationality: item.nationality,
+      dob: item.dob,
+      idDocType: item.idDocType as IdDocType,
+      photoPath: item.photoPath,
+      documentsPath: item.DocumentsPath,
+      role: 'Athlete', // default — update when backend returns role
       status: 'pending',
       athleteClass: null,
       athleteCategory: null,
-      leaderRole: lp.leaders.roles as LeaderRole,
-      phoneNumber: lp.leaders.phoneNumber,
-      eventId: lp.eventsID,
-      sportId: lp.sportsID,
-      categoryId: null,
-      organizationId: lp.organizationID,
-      createdAt: lp.createdAt,
+      leaderRole: null,
+      phoneNumber: null,
+      eventId: item.eventId ?? null,
+      sportId: item.sportId ?? null,
+      categoryId: item.categoryId ?? null,
+      organizationId: item.organizationId ?? null,
+      createdAt: new Date(item.createdAt),
     }));
-
-    return [...athleteRegistrations, ...leaderRegistrations]
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   },
 
   async count(filters: RegistrationFilters): Promise<number> {
-    const { eventId, sportId, organizationId, role } = filters;
-    const baseWhere = {
-      ...(eventId ? { eventsID: eventId } : {}),
-      ...(sportId ? { sportsID: sportId } : {}),
-      ...(organizationId ? { organizationID: organizationId } : {}),
-    };
-
-    const [athletes, leaders] = await Promise.all([
-      role !== 'Leader' ? prisma.athleteParticipat.count({ where: baseWhere }) : 0,
-      role !== 'Athlete' ? prisma.leaderParticipat.count({ where: baseWhere }) : 0,
-    ]);
-
-    return athletes + leaders;
+    const res = await fetch(`${API}/enrollments?skip=0&limit=1`);
+    if (!res.ok) throw new Error('Failed to count registrations');
+    const json = await res.json();
+    return json.count;
   },
 };

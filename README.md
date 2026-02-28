@@ -34,3 +34,22 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## External backend connection
+
+This app can proxy all `/api/*` calls to another backend service.
+
+Set this in `.env.local`:
+
+```bash
+BACKEND_API_BASE_URL=http://localhost:4000/api
+NEXT_PUBLIC_EVENTS_WS_URL=ws://localhost:4000/ws/events
+```
+
+Then restart the Next.js dev server.
+
+Notes:
+- If `BACKEND_API_BASE_URL` is not set, the app uses its local `app/api/*` routes.
+- Existing frontend calls like `fetch('/api/events')` will automatically go to your external backend when proxying is enabled.
+- `NEXT_PUBLIC_EVENTS_WS_URL` is optional and used by the register page for WebSocket-first event loading.
+- If WebSocket connect/data fails, the frontend automatically falls back to `fetch('/api/events')`.

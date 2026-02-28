@@ -2,6 +2,9 @@
 
 @source "../src/**/*.{ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
+@source "../ui/**/*.{ts,tsx}";
+@source "../domains/**/*.{ts,tsx}";
+@source "../app/**/*.{ts,tsx}";
 
 @custom-variant dark (&:is(.dark *));
 

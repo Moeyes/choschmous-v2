@@ -1,37 +1,45 @@
 // ============================================================
 // domains/auth/auth.types.ts
-// Derived from: Users table in ER diagram
+// Matches backend SQLAlchemy User model (src/database/model.py)
 // ============================================================
 
-import { Role } from "@/config/index";
+import { Role } from '@/config/roles';
 
-export type UserLevel = 0 | 1 | 2; // 0 = public, 1 = admin, 2 = superadmin
+// Matches backend UserRole enum
+export type UserLevel = 0 | 1 | 2; // 0 = guest, 1 = admin, 2 = superadmin
 
 export type UserRole = 'superadmin' | 'admin' | 'public';
 
-export interface User {
-  userID: number;
+// Matches backend User table exactly (uuid PK, kh/en names, username, email, user_level)
+export interface BackendUser {
+  id: string;              // UUID
+  kh_family_name: string;
+  kh_given_name: string;
+  en_family_name: string;
+  en_given_name: string;
+  email: string;
   username: string;
-  password: string; // hashed — never expose in responses
-  userLevel: UserLevel;
-  photoPath: string | null;
-  createdAt: Date;
+  user_level: UserLevel;
+  photo_path: string | null;
+  created_at: string;
 }
 
-/** Safe user shape — never include password */
+/** Safe user shape returned from backend — no password */
 export interface SafeUser {
-  userID: number;
+  id: string;
   username: string;
-  userLevel: UserLevel;
+  email: string;
+  user_level: UserLevel;
   role: UserRole;
-  photoPath: string | null;
-  createdAt: Date;
+  kh_family_name: string;
+  kh_given_name: string;
+  en_family_name: string;
+  en_given_name: string;
+  photo_path: string | null;
 }
 
 export interface Session {
   user: SafeUser;
-  token?: string;
-  expiresAt?: Date;
 }
 
 export interface LoginInput {
@@ -39,20 +47,30 @@ export interface LoginInput {
   password: string;
 }
 
-export interface LoginResult {
+// What the backend POST /login returns
+export interface BackendLoginResponse {
+  success: boolean;
   user: SafeUser;
-  token: string;
+  token?: string;
 }
 
+// What the frontend session stores / passes around
 export interface AuthUser {
   id: string;
   email: string;
+  username: string;
   role: Role;
   name: string;
+  user_level: UserLevel;
 }
 
 export function userLevelToRole(level: UserLevel): UserRole {
   if (level === 2) return 'superadmin';
   if (level === 1) return 'admin';
   return 'public';
+}
+
+export function userLevelToFrontendRole(level: UserLevel): Role {
+  if (level === 2) return Role.SUPERADMIN;
+  return Role.ADMIN;
 }

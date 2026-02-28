@@ -1,111 +1,158 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Check, Building2 } from 'lucide-react';
 import { Skeleton } from '@/ui/design-system/primitives/Skeleton';
-import { SectionCard, StepHeader, Grid } from '@/ui/components/layout/LayoutPrimitives';
-import { SelectionPill } from '@/ui/components/layout/SelectionPill';
-import type { StepProps, OrgItem } from '@/ui/features/registrations/types/Registration.types';
+import { StepHeader, Grid } from '@/ui/components/layout/LayoutPrimitives';
+import type { StepProps } from '../../types/Registration.types';
 
-// ─── Module-level cache (survives re-renders, cleared on page reload) ──────────
+interface OrgItem {
+  id: number;
+  name: string;
+  type: string;
+  code?: string | null;
+}
 
-const orgCache: { data?: OrgItem[] } = {};
-
-// ─── Component ────────────────────────────────────────────────
+function mapOrg(raw: any): OrgItem {
+  return {
+    id: raw.id,
+    name: raw.name_kh ?? raw.name ?? '',
+    type: raw.type ?? '',
+    code: raw.code ?? null,
+  };
+}
 
 export function OrganizationStep({ formData, setFields, errors, onNext }: StepProps) {
-  const [orgs, setOrgs] = useState<OrgItem[]>(orgCache.data ?? []);
-  const [loading, setLoading] = useState(!orgCache.data);
+  const [orgs, setOrgs] = useState<OrgItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (orgCache.data) return;
-
-    let cancelled = false;
-
-    fetch('/api/provinces')
+    const controller = new AbortController();
+    fetch('/api/organizations?limit=100', { signal: controller.signal })
       .then((r) => r.json())
-      .then((data: unknown) => {
-        if (!cancelled) {
-          orgCache.data = Array.isArray(data) ? (data as OrgItem[]) : [];
-          setOrgs(orgCache.data);
-        }
+      .then((json) => {
+        const data = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+        setOrgs(data.map(mapOrg));
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .catch((err) => {
+        if (err.name !== 'AbortError') setFetchError('មិនអាចទាញទិន្នន័យបាន');
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
   }, []);
 
   const handleSelect = (org: OrgItem) => {
-    setFields({
-      organizationId: org.id,
-      organizationName: org.khmerName ?? org.name,
-      organizationType: org.type.toLowerCase() === 'province' ? 'province' : 'ministry',
-    });
-    setTimeout(onNext, 250);
+    const fields = {
+      organizationId: String(org.id),
+      organizationName: org.name,
+      organizationType: (org.type === 'province' ? 'province' : 'ministry') as
+        | 'province'
+        | 'ministry',
+    };
+    setFields(fields);
+    (onNext as any)(fields);
   };
-
-  const ministries = orgs.filter((o) => o.type.toLowerCase() === 'ministry');
-  const provinces = orgs.filter((o) => o.type.toLowerCase() === 'province');
-
-  if (loading) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-6">
-      <StepHeader title="ជ្រើសរើសស្ថាប័ន" subtitle="ជ្រើសរើសក្រសួង ឬ ខេត្តរបស់អ្នក" />
+      <StepHeader title="ជ្រើសរើសអង្គភាព" subtitle="ជ្រើសរើសខេត្ត ឬស្ថាប័នដែលអ្នកតំណាង" />
 
-      {errors.organizationId && <p className="text-xs text-red-600">{errors.organizationId}</p>}
-
-      {ministries.length > 0 && (
-        <SectionCard title="ក្រសួង">
-          <div className="flex flex-wrap gap-2">
-            {ministries.map((org) => (
-              <SelectionPill
-                key={org.id}
-                label={org.khmerName ?? org.name}
-                isSelected={formData.organizationId === org.id}
-                onClick={() => handleSelect(org)}
-                variant="emerald"
-                size="sm"
-              />
-            ))}
-          </div>
-        </SectionCard>
+      {loading ? (
+        <LoadingGrid />
+      ) : fetchError ? (
+        <p className="py-10 text-center" style={{ color: 'var(--destructive)' }}>
+          {fetchError}
+        </p>
+      ) : orgs.length === 0 ? (
+        <p className="py-10 text-center" style={{ color: 'var(--reg-slate-600)' }}>
+          មិនមានអង្គភាព
+        </p>
+      ) : (
+        <Grid cols={2}>
+          {orgs.map((org) => (
+            <OrgCard
+              key={org.id}
+              org={org}
+              isSelected={formData.organizationId === String(org.id)}
+              onSelect={handleSelect}
+            />
+          ))}
+        </Grid>
       )}
 
-      {provinces.length > 0 && (
-        <SectionCard title="ខេត្ត">
-          <Grid cols={4} gap={2}>
-            {provinces.map((org) => (
-              <SelectionPill
-                key={org.id}
-                label={org.khmerName ?? org.name}
-                isSelected={formData.organizationId === org.id}
-                onClick={() => handleSelect(org)}
-                variant="emerald"
-                size="sm"
-              />
-            ))}
-          </Grid>
-        </SectionCard>
+      {errors.organizationId && (
+        <p className="text-xs" style={{ color: 'var(--destructive)' }}>
+          {errors.organizationId}
+        </p>
       )}
     </div>
   );
 }
 
-// ─── Loading state ────────────────────────────────────────────
+interface OrgCardProps {
+  org: OrgItem;
+  isSelected: boolean;
+  onSelect: (org: OrgItem) => void;
+}
 
-function LoadingSkeleton() {
+function OrgCard({ org, isSelected, onSelect }: OrgCardProps) {
   return (
-    <div className="space-y-6">
-      <StepHeader title="ជ្រើសរើសស្ថាប័ន" subtitle="ជ្រើសរើសក្រសួង ឬ ខេត្ត" />
-      <div className="flex flex-wrap gap-3">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-10 w-32 rounded-full" />
-        ))}
+    <button
+      type="button"
+      onClick={() => onSelect(org)}
+      className={`event-card group${isSelected ? 'selected' : ''}`}
+    >
+      {isSelected && (
+        <div className="event-card-check">
+          <Check style={{ width: '0.875rem', height: '0.875rem', color: 'white' }} />
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: isSelected ? 'var(--reg-indigo-600)' : 'var(--reg-indigo-50)',
+          }}
+        >
+          <Building2
+            style={{
+              width: '1rem',
+              height: '1rem',
+              color: isSelected ? 'white' : 'var(--reg-indigo-600)',
+            }}
+          />
+        </div>
+        <div>
+          <h3
+            className={`event-card-title${isSelected ? 'selected' : ''}`}
+            style={{ marginBottom: 0 }}
+          >
+            {org.name}
+          </h3>
+          {org.code && <p className="event-card-text mt-0.5 text-xs">{org.code}</p>}
+        </div>
       </div>
-    </div>
+
+      {org.type && (
+        <p
+          className="mt-3 text-xs font-medium tracking-wide uppercase"
+          style={{ color: isSelected ? 'var(--reg-indigo-600)' : 'var(--reg-slate-600)' }}
+        >
+          {org.type === 'province' ? 'ខេត្ត / រាជធានី' : org.type}
+        </p>
+      )}
+    </button>
+  );
+}
+
+function LoadingGrid() {
+  return (
+    <Grid cols={2}>
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-28 rounded-2xl" />
+      ))}
+    </Grid>
   );
 }

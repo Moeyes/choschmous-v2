@@ -15,9 +15,9 @@ export const updateSportSchema = z.object({
 
 export const sportFiltersSchema = z.object({
   search: z.string().optional(),
-  eventId: z.number().int().positive().optional(),
-  page: z.number().int().min(1).optional().default(1),
-  limit: z.number().int().min(1).max(100).optional().default(20),
+  eventId: z.coerce.number().int().positive().optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
 export type CreateSportData = z.infer<typeof createSportSchema>;

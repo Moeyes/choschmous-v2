@@ -16,7 +16,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useStepWizard } from '@/ui/components/navigation/useStepWizard';
 import { RegistrationSidebar } from './RegistrationSidebar';
 import { useRegistration, validateStep } from '../hooks/useRegistration';
-import type { RegistrationErrors } from '../hooks/useRegistration';
+import type { RegistrationErrors, RegistrationFormData } from '../hooks/useRegistration';
 import {
   EventStep,
   OrganizationStep,
@@ -68,7 +68,6 @@ export function RegistrationWizard({
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [enrollId, setEnrollId] = useState<number | null>(null);
 
-  // ensure we don't try to access properties on undefined entries
   const currentEvent = events.filter(Boolean).find((e) => e && e.id === formData.eventId);
   const sports = (currentEvent?.sports ?? []) as any[];
 
@@ -80,15 +79,21 @@ export function RegistrationWizard({
   }));
   const wizard = useStepWizard(steps);
 
-  const attemptNext = useCallback(() => {
-    const errs = validateStep(wizard.activeIndex, formData);
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
-    setErrors({});
-    wizard.nextStep();
-  }, [wizard, formData]);
+  // override lets EventStep (and others) pass freshly-selected values
+  // before React has flushed the setFields state update
+  const attemptNext = useCallback(
+    (override?: Partial<RegistrationFormData>) => {
+      const merged = override ? { ...formData, ...override } : formData;
+      const errs = validateStep(wizard.activeIndex, merged);
+      if (Object.keys(errs).length) {
+        setErrors(errs);
+        return;
+      }
+      setErrors({});
+      wizard.nextStep();
+    },
+    [wizard, formData]
+  );
 
   const goToStep = useCallback(
     (idx: number) => {
@@ -106,9 +111,9 @@ export function RegistrationWizard({
       case 1:
         return <OrganizationStep {...p} />;
       case 2:
-        return <SportStep {...p} sports={sports} />;
+        return <SportStep {...p}  />;
       case 3:
-        return <CategoryStep {...p} sports={sports} />;
+        return <CategoryStep {...p} />;
       case 4:
         return <PersonalInfoStep {...p} />;
       case 5:
@@ -139,7 +144,7 @@ export function RegistrationWizard({
     }
   };
 
-  const hideNav = wizard.activeIndex >= 4; // PersonalInfo has own footer; Confirmation & Completed handle themselves
+  const hideNav = wizard.activeIndex >= 4;
 
   return (
     <div className="reg-split-layout min-h-[80vh]">
@@ -190,7 +195,7 @@ export function RegistrationWizard({
             </button>
             <button
               type="button"
-              onClick={attemptNext}
+              onClick={() => attemptNext()}
               className="rounded-full bg-indigo-600 px-8 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
               បន្ត

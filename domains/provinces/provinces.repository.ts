@@ -1,37 +1,64 @@
-import type { ExtendedPrismaClient } from '@/infrastructure/db/prisma';
+// ============================================================
+// domains/provinces/provinces.repository.ts
+// Calls FastAPI backend — no Prisma
+// NOTE: Your backend has /organizations for provinces (orgpro.router)
+// Update the path below if your backend uses /provinces instead
+// ============================================================
+
 import type { ProvinceFilters, CreateProvinceInput, UpdateProvinceInput } from './provinces.types';
-import { toPrismaSkipTake } from '@/lib/utils/transformers';
+
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const API = `${BACKEND_URL}/api/v1`;
 
 export class ProvincesRepository {
-  constructor(private db: ExtendedPrismaClient) {}
-
   async findMany(filters: ProvinceFilters = {}) {
-    const { search, ...pagination } = filters;
-    const where = search ? { name: { contains: search, mode: 'insensitive' as const } } : {};
-    const [data, total] = await Promise.all([
-      this.db.province.findMany({
-        where,
-        ...toPrismaSkipTake(pagination),
-        orderBy: { name: 'asc' },
-      }),
-      this.db.province.count({ where }),
-    ]);
-    return { data, total };
+    const { page = 1, limit = 20 } = filters as any;
+    const skip = (page - 1) * limit;
+
+    const res = await fetch(`${API}/organizations?skip=${skip}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to fetch provinces');
+
+    const json = await res.json();
+    return { data: json.data, total: json.count };
   }
 
-  findById(id: number) {
-    return this.db.province.findUnique({ where: { id } });
+  async findById(id: number) {
+    const res = await fetch(`${API}/organizations/${id}`);
+    if (!res.ok) return null;
+    return res.json();
   }
 
-  create(input: CreateProvinceInput) {
-    return this.db.province.create({ data: input });
+  async create(input: CreateProvinceInput) {
+    const res = await fetch(`${API}/organizations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create province' }));
+      throw new Error(err.detail ?? 'Failed to create province');
+    }
+    return res.json();
   }
 
-  update(id: number, input: UpdateProvinceInput) {
-    return this.db.province.update({ where: { id }, data: input });
+  async update(id: number, input: UpdateProvinceInput) {
+    const res = await fetch(`${API}/organizations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update province' }));
+      throw new Error(err.detail ?? 'Failed to update province');
+    }
+    return res.json();
   }
 
-  delete(id: number) {
-    return this.db.province.delete({ where: { id } });
+  async delete(id: number) {
+    const res = await fetch(`${API}/organizations/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to delete province' }));
+      throw new Error(err.detail ?? 'Failed to delete province');
+    }
   }
 }

@@ -1,25 +1,37 @@
-import { createHash } from 'crypto';
+// ============================================================
+// domains/auth/auth.service.ts
+// ============================================================
+
 import { AuthRepository } from './auth.repository';
 import type { LoginInput, AuthUser } from './auth.types';
 import { loginSchema } from './auth.validators';
 import { UnauthorizedError } from '@/lib/api/errors';
-import { Role } from '@/config/roles';
-
-function hash(p: string) {
-  return createHash('sha256').update(p).digest('hex');
-}
+import { userLevelToFrontendRole } from './auth.types';
 
 export class AuthService {
   constructor(private repo: AuthRepository) {}
+
   async login(input: LoginInput): Promise<AuthUser> {
-    const { email, password } = loginSchema.parse(input);
-    const user = await this.repo.findById(email);
-    if (!user || user.password !== hash(password)) throw new UnauthorizedError();
+    const parsed = loginSchema.parse(input);
+
+    let result;
+    try {
+      result = await this.repo.login(parsed);
+    } catch {
+      throw new UnauthorizedError();
+    }
+
+    if (!result?.user) throw new UnauthorizedError();
+
+    const { user } = result;
+
     return {
-      id: String(user.userID),
-      email: user.username,
-      role: user.userLevel as unknown as Role,
-      name: user.username,
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      role: userLevelToFrontendRole(user.user_level),
+      name: `${user.en_given_name} ${user.en_family_name}`.trim(),
+      user_level: user.user_level,
     };
   }
 }
