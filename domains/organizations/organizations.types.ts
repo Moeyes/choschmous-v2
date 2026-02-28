@@ -1,40 +1,28 @@
 // ============================================================
 // domains/organizations/organizations.types.ts
-// Derived from: Organization table in ER diagram
+// Organization + Loan data for survey pre-loading
 // ============================================================
 
-export type OrganizationType = 'province' | 'ministry' | 'department' | string;
-
-/** Maps to: Organization table */
+/** Maps to: Organizations table */
 export interface Organization {
-  id: number;
+  id: string;
   name: string;
-  createdAt: Date;
+  createdAt?: Date;
 }
 
-/** Enriched org with type metadata (derived from usage context) */
-export interface OrganizationDetail extends Organization {
-  type: OrganizationType;
-  khmerName?: string | null;
+/** Maps to: Loans table (linked to organization) */
+export interface Loan {
+  id: string;
+  organizationId: string;
+  amount: number;
+  status: string;
+  createdAt?: Date;
 }
 
 // ── DTOs ──────────────────────────────────────────────────────
 
-export interface CreateOrganizationInput {
-  name: string;
-  type?: OrganizationType;
-  khmerName?: string | null;
-}
-
-export interface UpdateOrganizationInput {
-  id: number;
-  name?: string;
-  type?: OrganizationType;
-  khmerName?: string | null;
-}
-
+/** Filters for fetching organizations */
 export interface OrganizationFilters {
-  type?: OrganizationType;
   search?: string;
   page?: number;
   limit?: number;
