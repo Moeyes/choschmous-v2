@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { ROUTES } from '@/config/routes';
 import type { ApiResponse } from '@/types/api';
 import type { DashboardPayload } from '../types/Dashboard.types';
 
@@ -21,7 +22,7 @@ export function useDashboardData() {
     setError(null);
 
     try {
-      const res = await fetch('/api/dashboard', { cache: 'no-store' });
+      const res = await fetch(ROUTES.API.DASHBOARD, { cache: 'no-store' });
       const json = (await res.json()) as ApiResponse<DashboardPayload>;
 
       if (!res.ok || !json.success) {

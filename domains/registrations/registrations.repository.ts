@@ -1,6 +1,4 @@
-// ============================================================
 // domains/registrations/registrations.repository.ts
-// ============================================================
 
 import type {
   Enroll,
@@ -14,20 +12,11 @@ import type {
   IdDocType,
 } from './registrations.types';
 
-// Strip trailing slash from env var to prevent //api// double-slash URLs
 const BACKEND_URL = (process.env.BACKEND_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(
   /\/+$/,
   ''
 );
 const API = `${BACKEND_URL}/api`;
-
-function splitName(fullName: string | null): { family: string; given: string } {
-  if (!fullName) return { family: '', given: '' };
-  const parts = fullName.trim().split(/\s+/);
-  const family = parts[0] ?? '';
-  const given = parts.slice(1).join(' ') || family;
-  return { family, given };
-}
 
 function formatDate(dob: Date | string | null | undefined): string {
   if (!dob) return '';
@@ -44,107 +33,94 @@ const GENDER_MAP: Record<string, string> = {
   other: 'other',
 };
 
+// Backend IdDocumentType enum values (snake_case)
 const ID_DOC_MAP: Record<string, string> = {
   IDCard: 'national_id',
   NationalID: 'national_id',
   national_id: 'national_id',
+  docNationalId: 'national_id',
   Passport: 'passport',
   passport: 'passport',
+  docPassport: 'passport',
   BirthCertificate: 'birth_certificate',
   birth_certificate: 'birth_certificate',
+  docBirthCertificate: 'birth_certificate',
   FamilyBook: 'family_book',
   family_book: 'family_book',
   Other: 'other',
   other: 'other',
 };
 
-// ─── FIX: Map every frontend leaderRole value → exact backend enum value ──────
-//
-// FastAPI's LeaderRole enum likely uses snake_case values. Check your
-// Backend/src/database/enumdata.py (or model.py) for the exact strings.
-// The keys below cover all common frontend variants; adjust values if needed.
-//
 const LEADER_ROLE_MAP: Record<string, string> = {
-  // Frontend value          → Backend enum value
   coach_trainer: 'coach_trainer',
   CoachTrainer: 'coach_trainer',
   coach: 'coach_trainer',
-
   team_manager: 'team_manager',
   TeamManager: 'team_manager',
   manager: 'team_manager',
-
   delegate: 'delegate',
   Delegate: 'delegate',
-
   technical_official: 'technical_official',
-  TechnicalOfficial: 'technical_official',
-  technical: 'technical_official',
-
   medical_staff: 'medical_staff',
-  MedicalStaff: 'medical_staff',
-  medical: 'medical_staff',
-
   media: 'media',
-  Media: 'media',
-
   security: 'security',
-  Security: 'security',
-
   volunteer: 'volunteer',
-  Volunteer: 'volunteer',
-
+  team_lead: 'team_lead',
+  teacher_assistant: 'teacher_assistant',
   official: 'official',
   Official: 'official',
-
   other: 'other',
   Other: 'other',
 };
 
-/**
- * Map a frontend leader role string to the exact enum value the backend expects.
- * Falls back to the raw value so you can see the unrecognised string in the error.
- */
 function mapLeaderRole(role: string | null | undefined): string {
   if (!role) return 'delegate';
   return LEADER_ROLE_MAP[role] ?? role;
 }
 
+export interface EnrollWithUuid extends Enroll {
+  uuid: string | null;
+}
+
 export const registrationsRepository = {
   async createEnroll(data: {
-    khmerName: string | null;
-    englishName: string | null;
+    // ── Send split name fields directly — no joinng/splitting ──
+    khGivenName: string;
+    khFamilyName: string;
+    enGivenName: string;
+    enFamilyName: string;
     gender: string;
     nationality: string;
     dob: Date | string;
-    idDocType: string;
+    idDocType: string; // already mapped to backend enum value
     address?: string | null;
     phoneNumber?: string | null;
     userId?: string | null;
     photoPath?: string | null;
     documentsPath?: string | null;
-  }): Promise<Enroll> {
-    const kh = splitName(data.khmerName);
-    const en = splitName(data.englishName);
+  }): Promise<EnrollWithUuid> {
+    const body = {
+      kh_given_name: data.khGivenName || '',
+      kh_family_name: data.khFamilyName || '',
+      en_given_name: data.enGivenName || '',
+      en_family_name: data.enFamilyName || '',
+      phonenumber: data.phoneNumber ?? '',
+      gender: GENDER_MAP[data.gender] ?? 'other',
+      nationality: data.nationality || 'Cambodian',
+      date_of_birth: formatDate(data.dob),
+      id_document_type: ID_DOC_MAP[data.idDocType] ?? 'other',
+      address: data.address ?? null,
+      user_id: data.userId ?? null,
+      photo_path: data.photoPath ?? null,
+      documents_path: data.documentsPath ?? null,
+    };
+
+    console.log('[createEnroll] body →', JSON.stringify(body, null, 2));
 
     const res = await fetch(`${API}/enrollments/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        kh_family_name: kh.family,
-        kh_given_name: kh.given,
-        en_family_name: en.family,
-        en_given_name: en.given,
-        phonenumber: data.phoneNumber ?? '',
-        gender: GENDER_MAP[data.gender] ?? 'other',
-        nationality: data.nationality ?? 'Cambodian',
-        date_of_birth: formatDate(data.dob),
-        id_document_type: ID_DOC_MAP[data.idDocType] ?? 'other',
-        address: data.address ?? null,
-        user_id: data.userId ?? null,
-        photo_path: data.photoPath ?? null,
-        documents_path: data.documentsPath ?? null,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -153,8 +129,11 @@ export const registrationsRepository = {
     }
 
     const result = await res.json();
+    console.log('[createEnroll] response →', JSON.stringify(result, null, 2));
+
     return {
       id: result.id,
+      uuid: result.user_id ?? null, // uuid col — may be null for public registrations
       gender: result.gender as Gender,
       name: `${result.en_given_name} ${result.en_family_name}`.trim(),
       nationality: result.nationality,
@@ -212,7 +191,6 @@ export const registrationsRepository = {
     if (data.categoriesID && data.categoriesID !== 0) {
       body.category_id = data.categoriesID;
     }
-
     const res = await fetch(`${API}/athlete-participation/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -232,20 +210,14 @@ export const registrationsRepository = {
     roles: string;
     phoneNumber?: string | null;
   }): Promise<Leader> {
-    // ─── FIX: Map the role before sending to backend ──────────────────────────
     const mappedRole = mapLeaderRole(data.roles);
-
     const res = await fetch(`${API}/leaders/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        enroll_id: data.enroll_id,
-        leader_role: mappedRole, // ← was: data.roles (unmapped)
-      }),
+      body: JSON.stringify({ enroll_id: data.enroll_id, leader_role: mappedRole }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to create leader' }));
-      // Include the mapped role in the error for easier debugging
       throw new Error(
         typeof err.detail === 'string'
           ? `${err.detail} (sent leader_role="${mappedRole}")`
@@ -275,6 +247,21 @@ export const registrationsRepository = {
       throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
     }
     return res.json();
+  },
+
+  async patchEnroll(
+    id: number,
+    patch: { photo_path?: string; documents_path?: string }
+  ): Promise<void> {
+    const res = await fetch(`${API}/enrollments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'PATCH failed' }));
+      console.error('[patchEnroll] failed:', err);
+    }
   },
 
   async findAll(filters: RegistrationFilters): Promise<Registration[]> {

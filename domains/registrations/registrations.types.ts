@@ -1,16 +1,14 @@
 // ============================================================
 // domains/registrations/registrations.types.ts
-// Derived from: Enroll + Athletes + Leaders + AthleteParticipat
-//               + LeaderParticipat tables in ER diagram
 // ============================================================
 
 // ── Enums / Literals ──────────────────────────────────────────
 
 export type RegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type Gender = 'Male' | 'Female';
-export type IdDocType = 'IDCard' | 'BirthCertificate'| 'Passport' | 'FamilyBook' | 'Other';
+export type IdDocType = 'IDCard' | 'BirthCertificate' | 'Passport' | 'FamilyBook' | 'Other';
 export type PositionRole = 'Athlete' | 'Leader' | 'Technical';
-export type AthleteCategory = 'Male' | 'Female'; // maps to gender-based category
+export type AthleteCategory = 'Male' | 'Female';
 export type LeaderRole =
   | 'coach'
   | 'manager'
@@ -21,13 +19,9 @@ export type LeaderRole =
 
 // ── Core DB Tables ────────────────────────────────────────────
 
-/**
- * Maps to: Enroll table
- * Base participant record — shared between Athletes and Leaders
- */
 export interface Enroll {
   id: number;
-  userID: number;        // FK → Users.id
+  userID: number;
   name: string;
   gender: Gender;
   nationality: string;
@@ -39,60 +33,43 @@ export interface Enroll {
   createdAt: Date;
 }
 
-/**
- * Maps to: Athletes table
- * Extends Enroll for athlete-specific data
- */
 export interface Athlete {
   id: number;
-  enrollID: number;      // FK → Enroll.id (1:1)
+  enrollID: number;
   class: string | null;
   uniformSize: string | null;
   createdAt: Date;
 }
 
-/**
- * Maps to: Leaders table
- * Extends Enroll for leader-specific data
- */
 export interface Leader {
   id: number;
-  enrollID: number;      // FK → Enroll.id (1:1)
+  enrollID: number;
   roles: LeaderRole;
-  phoneNumber: string;   // unique
+  phoneNumber: string;
   createdAt: Date;
 }
 
-/**
- * Maps to: AthleteParticipat table
- * Links Athletes to Events × Sports × Categories × Organizations
- */
 export interface AthleteParticipation {
   id: number;
-  athletesID: number;       // FK → Athletes.id
-  eventsID: number;         // FK → Events.id
-  categoriesID: number;     // FK → categories.id
-  sportsID: number;         // FK → Sports.id
-  organizationID: number;   // FK → Organization.id
+  athletesID: number;
+  eventsID: number;
+  categoriesID: number;
+  sportsID: number;
+  organizationID: number;
   createdAt: Date;
 }
 
-/**
- * Maps to: LeaderParticipat table
- * Links Leaders to Events × Sports × Organizations
- */
 export interface LeaderParticipation {
   id: number;
-  leadersID: number;        // FK → Leaders.id
-  eventsID: number;         // FK → Events.id
-  sportsID: number;         // FK → Sports.id
-  organizationID: number;   // FK → Organization.id
+  leadersID: number;
+  eventsID: number;
+  sportsID: number;
+  organizationID: number;
   createdAt: Date;
 }
 
 // ── Composite / View types ────────────────────────────────────
 
-/** Full registration record as returned by the API */
 export interface Registration {
   enrollId: number;
   name: string;
@@ -104,13 +81,10 @@ export interface Registration {
   documentsPath: string | null;
   role: PositionRole;
   status: RegistrationStatus;
-  // Athlete-specific (null if Leader)
   athleteClass: string | null;
   athleteCategory: AthleteCategory | null;
-  // Leader-specific (null if Athlete)
   leaderRole: LeaderRole | null;
   phoneNumber: string | null;
-  // Participation context
   eventId: number | null;
   sportId: number | null;
   categoryId: number | null;
@@ -121,31 +95,49 @@ export interface Registration {
 // ── Input DTOs ────────────────────────────────────────────────
 
 export interface CreateRegistrationInput {
-  // Enroll fields
-  fullNameKhmer: string | null;
-  fullNameEnglish: string | null;
+  // ── Name — split fields (preferred, map directly to DB columns) ──
+  // kh_given_name, kh_family_name, en_given_name, en_family_name
+  firstNameKhmer?: string | null; // → kh_given_name
+  lastNameKhmer?: string | null; // → kh_family_name
+  firstNameLatin?: string | null; // → en_given_name
+  lastNameLatin?: string | null; // → en_family_name
+
+  // ── Kept for backward compat — used if split fields are empty ──
+  fullNameKhmer?: string | null;
+  fullNameEnglish?: string | null;
+
+  // ── Identity ──────────────────────────────────────────────────
   gender: Gender;
-  dateOfBirth: string;       // ISO date string
-  nationality: string;
+  dateOfBirth: string;
+  nationality: string; // actual nationality → enrollments.nationality
   nationalID: string;
   phone: string;
+
+  // ── Document type — maps to id_document_type enum ─────────────
+  idDocType?: IdDocType | string | null;
+
+  // ── File paths (set after upload via PATCH) ───────────────────
   photoUrl?: string | null;
   nationalityDocumentUrl?: string | null;
 
-  // Role
+  // ── Role ──────────────────────────────────────────────────────
   role: PositionRole;
   athleteCategory?: AthleteCategory | null;
   leaderRole?: LeaderRole | null;
   coachName?: string | null;
   assistantName?: string | null;
 
-  // Context
+  // ── Context ───────────────────────────────────────────────────
   eventId: number;
   sportId: number;
   categoryId?: number | null;
   organizationId: number;
-  sports?: number[];         // for multi-sport registrations
+  sports?: number[];
   sportCategory?: string | null;
+
+  // ── Internal (not sent to DB directly) ────────────────────────
+  userId?: string | null; // session user id
+  organizationAddress?: string | null;
 }
 
 export interface UpdateRegistrationStatusInput {

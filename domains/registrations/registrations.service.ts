@@ -1,6 +1,4 @@
-// ============================================================
 // domains/registrations/registrations.service.ts
-// ============================================================
 
 import { registrationsRepository } from './registrations.repository';
 import {
@@ -12,8 +10,6 @@ import type {
   RegistrationFilters,
   CreateRegistrationInput,
   UpdateRegistrationStatusInput,
-  LeaderRole,
-  IdDocType,
 } from './registrations.types';
 
 export const registrationsService = {
@@ -25,38 +21,40 @@ export const registrationsService = {
     return { data, total };
   },
 
-  async create(input: CreateRegistrationInput): Promise<{ enrollId: number }> {
+  async create(input: CreateRegistrationInput): Promise<{ enrollId: number; uuid: string | null }> {
     const parsed = createRegistrationSchema.parse(input);
 
-    // 1. Create base Enroll record
+    // ── 1. Create enrollment ──────────────────────────────────────────────────
     const enroll = await registrationsRepository.createEnroll({
-      khmerName: parsed.fullNameKhmer ?? null,
-      englishName: parsed.fullNameEnglish ?? null,
+      // Split name fields map directly to DB columns — no join/split needed
+      khGivenName:
+        (parsed as any).firstNameKhmer || (parsed as any).fullNameKhmer?.split(' ').slice(1).join(' ') || '',
+      khFamilyName: (parsed as any).lastNameKhmer || (parsed as any).fullNameKhmer?.split(' ')[0] || '',
+      enGivenName: (parsed as any).firstNameLatin || (parsed as any).fullNameEnglish?.split(' ')[0] || '',
+      enFamilyName:
+        (parsed as any).lastNameLatin || (parsed as any).fullNameEnglish?.split(' ').slice(1).join(' ') || '',
+
       gender: parsed.gender,
-      nationality: parsed.nationality,
+      nationality: parsed.nationality || 'Cambodian', // real nationality string
+
       dob: parsed.dateOfBirth,
-      idDocType: parsed.nationalID ? 'IDCard' : 'BirthCertificate',
-      // FIX: pass phone number — was hardcoded '' in repository
+
+      // idDocType from the user's doc selection — NOT derived from nationalID
+      idDocType: (parsed as any).idDocType || (parsed.nationalID ? 'IDCard' : 'BirthCertificate'),
+
       phoneNumber: parsed.phone ?? null,
-      // FIX: address from organization (passed in via organizationAddress if available)
       address: (parsed as any).organizationAddress ?? null,
-      // FIX: user_id from session (passed in via userId if available)
       userId: (parsed as any).userId ?? null,
-      photoPath: parsed.photoUrl ?? null,
-      documentsPath: parsed.nationalityDocumentUrl ?? null,
+      photoPath: (parsed as any).photoUrl ?? null,
+      documentsPath: (parsed as any).nationalityDocumentUrl ?? null,
     });
 
-    // 2. Branch: Athlete vs Leader
+    // ── 2. Branch: Athlete vs Leader ──────────────────────────────────────────
     if (parsed.role === 'Athlete') {
-      const athlete = await registrationsRepository.createAthlete({
-        enroll_id: enroll.id,
-      });
-
+      const athlete = await registrationsRepository.createAthlete({ enroll_id: enroll.id });
       await registrationsRepository.createAthleteParticipation({
         athletesID: athlete.id,
         eventsID: parsed.eventId,
-        // FIX #3: Pass null/undefined instead of 0 when no category selected
-        // The repository will omit category_id from the request if falsy
         categoriesID: parsed.categoryId ?? 0,
         sportsID: parsed.sportId,
         organizationID: parsed.organizationId,
@@ -64,10 +62,9 @@ export const registrationsService = {
     } else {
       const leader = await registrationsRepository.createLeader({
         enroll_id: enroll.id,
-        roles: parsed.leaderRole ?? 'delegate',
+        roles: (parsed as any).leaderRole ?? 'delegate',
         phoneNumber: parsed.phone,
       });
-
       await registrationsRepository.createLeaderParticipation({
         leadersID: leader.id,
         eventsID: parsed.eventId,
@@ -76,7 +73,7 @@ export const registrationsService = {
       });
     }
 
-    return { enrollId: enroll.id };
+    return { enrollId: enroll.id, uuid: enroll.uuid };
   },
 
   async updateStatus(input: UpdateRegistrationStatusInput): Promise<void> {

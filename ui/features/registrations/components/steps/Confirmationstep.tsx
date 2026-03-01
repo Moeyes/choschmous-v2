@@ -1,30 +1,12 @@
 'use client';
 
-/**
- * Confirmationstep.tsx
- *
- * Fixes applied:
- *  1. Reads ALL 5 photo/doc slots from IndexedDB (not just 2)
- *  2. Document "✓ បានបញ្ចូល" status reflects IndexedDB state, not lost React state
- *  3. Picks first available document from all checked doc slots for upload
- *  4. Submit button disabled until IndexedDB slots finish loading
- */
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CheckCircle2, AlertCircle, Edit2, QrCode } from 'lucide-react';
 import { Button } from '@/ui/design-system/primitives/Button';
 import { SectionCard, StepHeader, InfoRow } from '@/ui/components/layout/LayoutPrimitives';
 import { submitRegistrationAction } from '../../actions/submitRegistration';
-import {
-  GENDER_LABELS,
-  ROLE_LABELS,
-  ID_DOC_LABELS,
-  buildFullNameKhmer,
-  buildFullNameLatin,
-} from '../../types/Registration.types';
-import { PhotoStorage } from '@/ui/features/registrations/hooks/photoStorage';
+import { GENDER_LABELS, ROLE_LABELS, ID_DOC_LABELS } from '../../types/Registration.types';
 import type { RegistrationFormData, LeaderRole } from '../../types/Registration.types';
-import type { PhotoSlotKey } from '../../hooks/usePersonalInfoDraft';
 
 // ─── Props ────────────────────────────────────────────────────
 
@@ -34,31 +16,7 @@ interface ConfirmationStepProps {
   onSuccess: (enrollId: number) => void;
 }
 
-// ─── All photo slot keys — must match usePersonalInfoDraft ────
-
-const PHOTO_SLOT_KEYS: PhotoSlotKey[] = [
-  'photoUpload',
-  'nationalityDocumentUpload',
-  'docBirthCertificate',
-  'docNationalId',
-  'docPassport',
-];
-
-type PhotoSlots = Record<PhotoSlotKey, File | null>;
-
-const EMPTY_SLOTS: PhotoSlots = {
-  photoUpload: null,
-  nationalityDocumentUpload: null,
-  docBirthCertificate: null,
-  docNationalId: null,
-  docPassport: null,
-};
-
 // ─── Helpers ──────────────────────────────────────────────────
-
-function getSessionKey(formData: RegistrationFormData): string {
-  return `${formData.eventId || 'evt'}_${formData.organizationId || 'org'}`;
-}
 
 function resolveRoleLabel(formData: RegistrationFormData): string {
   if (formData.role === 'Athlete') return ROLE_LABELS.Athlete;
@@ -68,229 +26,193 @@ function resolveRoleLabel(formData: RegistrationFormData): string {
   return '—';
 }
 
-function getCategoryLetter(formData: RegistrationFormData): string {
-  if (formData.categoryName) return formData.categoryName.charAt(0).toUpperCase();
-  if (formData.athleteCategory === 'Male') return 'A';
-  if (formData.athleteCategory === 'Female') return 'B';
-  return 'A';
+function getFullNameKhmer(formData: RegistrationFormData): string {
+  const first = formData.firstNameKhmer ?? '';
+  const last = formData.lastNameKhmer ?? '';
+  return [last, first].filter(Boolean).join(' ') || formData.fullNameKhmer || '—';
 }
 
-function displayNameKhmer(f: RegistrationFormData): string {
-  const parts = [f.firstNameKhmer, f.lastNameKhmer].filter(Boolean);
-  if (parts.length) return parts.join(' ');
-  return f.fullNameKhmer || '—';
-}
-
-function displayNameLatin(f: RegistrationFormData): string {
-  const parts = [f.firstNameLatin, f.lastNameLatin].filter(Boolean);
-  if (parts.length) return parts.join(' ');
-  return f.fullNameEnglish || '—';
+function getFullNameLatin(formData: RegistrationFormData): string {
+  const first = formData.firstNameLatin ?? '';
+  const last = formData.lastNameLatin ?? '';
+  return [first, last].filter(Boolean).join(' ') || formData.fullNameEnglish || '—';
 }
 
 // ─── ID Card Preview ──────────────────────────────────────────
 
 function IDCardPreview({
   formData,
-  photoUrl,
+  onEdit,
 }: {
   formData: RegistrationFormData;
-  photoUrl: string | null;
+  onEdit: () => void;
 }) {
-  const categoryLetter = getCategoryLetter(formData);
-  const nameKh = displayNameKhmer(formData);
-  const nameLatin = displayNameLatin(formData);
+  const fullKhmer = getFullNameKhmer(formData);
+  const fullLatin = getFullNameLatin(formData);
   const roleLabel = resolveRoleLabel(formData);
+  const photoUrl = formData.photoUpload ? URL.createObjectURL(formData.photoUpload) : null;
 
   return (
-    <div
-      className="mx-auto overflow-hidden rounded-2xl shadow-2xl select-none"
-      style={{ width: 280, fontFamily: "'Khmer OS', 'Noto Sans Khmer', sans-serif" }}
-    >
-      <div
-        className="flex flex-col items-center px-4 pt-3 pb-3 text-white"
-        style={{ background: 'linear-gradient(135deg, #0066b3 0%, #0099dd 100%)' }}
+    <div className="relative">
+      {/* Edit button */}
+      <button
+        onClick={onEdit}
+        className="absolute -top-2 -right-2 z-10 flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 shadow-sm transition-colors hover:border-indigo-300 hover:text-indigo-600"
       >
-        <div className="mb-1 flex items-center gap-2">
-          <span className="text-lg">🏅</span>
-          <div className="text-center leading-tight">
-            <p className="text-[8px] font-semibold tracking-wide opacity-90">គីឡាសរ្រម មាមទូ</p>
-            <p className="text-[7px] font-bold tracking-widest uppercase">
-              NATIONAL PRIMARY SCHOOL GAMES 2026
-            </p>
-          </div>
-        </div>
-        <p className="text-[8px] opacity-70">លេខ: _____ / ថ្ងៃ ___ / _____ / _______</p>
-      </div>
+        <Edit2 className="h-3 w-3" />
+        Edit
+      </button>
 
-      <div className="relative flex gap-3 bg-white px-4 py-3">
-        <div className="shrink-0">
+      {/* Card */}
+      <div
+        className="mx-auto overflow-hidden rounded-2xl shadow-2xl"
+        style={{
+          width: 280,
+          background: 'white',
+          border: '2px solid #1a3a8c',
+          fontFamily: 'sans-serif',
+        }}
+      >
+        {/* Card header — blue banner */}
+        <div
+          className="px-3 py-2 text-center"
+          style={{ background: 'linear-gradient(135deg, #1a3a8c 0%, #1565c0 100%)' }}
+        >
+          <p className="text-[9px] font-bold tracking-wide text-white opacity-90">
+            គីឡូសាប្រចាំជាតិ ២០២៦
+          </p>
+          <p className="text-[8px] tracking-widest text-blue-200 uppercase">
+            NATIONAL PRIMARY SCHOOL GAMES 2026
+          </p>
+        </div>
+
+        {/* Card body */}
+        <div className="flex gap-3 p-3">
+          {/* Photo */}
           <div
-            className="overflow-hidden rounded border-2 border-slate-200 bg-slate-100"
-            style={{ width: 64, height: 82 }}
+            className="flex shrink-0 items-center justify-center overflow-hidden rounded-md border-2 border-slate-200 bg-slate-100"
+            style={{ width: 70, height: 88 }}
           >
             {photoUrl ? (
-              <img src={photoUrl} alt="Portrait" className="h-full w-full object-cover" />
+              <img src={photoUrl} alt="profile" className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <svg viewBox="0 0 40 55" className="w-10 text-slate-300" fill="currentColor">
-                  <circle cx="20" cy="16" r="10" />
-                  <ellipse cx="20" cy="42" rx="16" ry="12" />
+              <div className="flex flex-col items-center gap-1 text-slate-300">
+                <svg viewBox="0 0 24 24" className="h-8 w-8 fill-current">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
                 </svg>
+                <span className="text-[9px]">4×6</span>
               </div>
             )}
           </div>
-        </div>
-        <div className="flex flex-1 flex-col justify-between">
-          <div>
-            <p className="text-[12px] leading-tight font-bold text-slate-800">{nameKh}</p>
-            <p className="text-[10px] leading-tight text-slate-500">{nameLatin}</p>
-            <p className="mt-1 text-[9px] text-slate-600">{roleLabel}</p>
-            <p className="text-[9px] text-slate-500">{formData.sportName || '—'}</p>
-          </div>
-          <div className="flex items-end gap-2">
-            <span className="text-4xl leading-none font-extrabold" style={{ color: '#e63329' }}>
-              {categoryLetter}
-            </span>
-          </div>
-        </div>
-      </div>
 
-      <div className="bg-white px-4 pb-2">
-        <p className="text-[9px] leading-snug text-slate-600">{formData.organizationName || '—'}</p>
-        <p className="text-[9px] text-slate-500">{formData.eventName || '—'}</p>
-      </div>
+          {/* Info */}
+          <div className="min-w-0 flex-1">
+            {/* Name in Khmer */}
+            <p className="truncate text-[11px] leading-tight font-bold text-slate-800">
+              {fullKhmer}
+            </p>
+            {/* Name in Latin */}
+            <p className="mb-2 truncate text-[10px] text-slate-500">{fullLatin}</p>
 
-      <div className="flex items-end justify-between bg-white px-4 pb-3">
+            {/* Role badge */}
+            <div
+              className="mb-2 inline-block rounded px-2 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase"
+              style={{ background: '#e53935' }}
+            >
+              {roleLabel || '—'}
+            </div>
+
+            {/* Info rows */}
+            <div className="space-y-0.5">
+              <InfoChip
+                label="ភេទ"
+                value={
+                  GENDER_LABELS[formData.gender as keyof typeof GENDER_LABELS] ?? formData.gender
+                }
+              />
+              <InfoChip label="កំណើត" value={formData.dateOfBirth || '—'} />
+              <InfoChip label="ស្ថាប័ន" value={formData.organizationName || '—'} />
+              <InfoChip label="កីឡា" value={formData.sportName || '—'} />
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="mx-3 border-t border-dashed border-slate-200" />
+
+        {/* QR + event */}
+        <div className="flex items-center justify-between px-3 py-2">
+          {/* QR placeholder */}
+          <div className="rounded border border-slate-200 bg-slate-50 p-1">
+            <QrCode className="h-8 w-8 text-slate-400" />
+          </div>
+          <div className="text-right">
+            <p className="text-[8px] tracking-wider text-slate-400 uppercase">
+              {formData.eventName || '—'}
+            </p>
+            <p className="text-[8px] text-slate-400">{formData.categoryName || '—'}</p>
+          </div>
+        </div>
+
+        {/* Footer blue bar */}
         <div
-          className="flex items-center justify-center rounded bg-slate-100 p-1"
-          style={{ width: 44, height: 44 }}
+          className="px-3 py-1.5 text-center"
+          style={{ background: 'linear-gradient(135deg, #1a3a8c 0%, #1565c0 100%)' }}
         >
-          <QrCode className="h-8 w-8 text-slate-400" />
+          <p className="text-[9px] font-bold tracking-widest text-white uppercase">កីឡាបាល់ទាត់</p>
         </div>
-        <svg viewBox="0 0 80 30" className="w-16 opacity-15" fill="#0066b3">
-          <circle cx="15" cy="15" r="12" fill="none" stroke="#0066b3" strokeWidth="3" />
-          <circle cx="40" cy="15" r="12" fill="none" stroke="#0066b3" strokeWidth="3" />
-          <circle cx="65" cy="15" r="12" fill="none" stroke="#0066b3" strokeWidth="3" />
-        </svg>
       </div>
 
-      <div
-        className="flex items-center justify-center px-4 py-2"
-        style={{ background: 'linear-gradient(135deg, #0066b3 0%, #0099dd 100%)' }}
-      >
-        <p className="text-[10px] font-bold tracking-wider text-white uppercase">
-          កីឡាបឋមសិក្សាជាតិ
-        </p>
-      </div>
-
-      <div className="items-around flex justify-around bg-slate-100 px-4 py-1.5">
-        <span className="text-[8px] font-bold text-blue-700">V-ACTIVE</span>
-        <span className="text-[8px] text-slate-500">SPORTS WATER</span>
-        <span className="text-[8px] text-slate-500">🏔️ ម្ហូបស្រ្ហោង</span>
-      </div>
+      <p className="mt-2 text-center text-[10px] text-slate-400">Card preview (A6 format)</p>
     </div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────
+// ─── Mini chip for card ───────────────────────────────────────
+
+function InfoChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="w-10 shrink-0 text-[8px] text-slate-400">{label}</span>
+      <span className="truncate text-[9px] font-medium text-slate-700">{value}</span>
+    </div>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────
 
 export function ConfirmationStep({ formData, onEdit, onSuccess }: ConfirmationStepProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // FIX: Load ALL 5 slots from IndexedDB — single source of truth for files
-  const [slots, setSlots] = useState<PhotoSlots>(EMPTY_SLOTS);
-  const [slotsLoaded, setSlotsLoaded] = useState(false);
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    const sessionKey = getSessionKey(formData);
-    let cancelled = false;
-    let objectUrl: string | null = null;
-
-    async function loadAll() {
-      const result: PhotoSlots = { ...EMPTY_SLOTS };
-      for (const key of PHOTO_SLOT_KEYS) {
-        try {
-          result[key] = await PhotoStorage.get(PhotoStorage.slotId(sessionKey, key));
-        } catch {
-          result[key] = null;
-        }
-      }
-      if (cancelled) return;
-      setSlots(result);
-      setSlotsLoaded(true);
-      if (result.photoUpload) {
-        objectUrl = URL.createObjectURL(result.photoUpload);
-        setPhotoPreviewUrl(objectUrl);
-      }
-    }
-
-    loadAll();
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /** Upload a single File to /api/upload; returns the public URL or null. */
-  const uploadFileToServer = async (
-    file: File | null,
-    subfolder = 'registrations',
-    customFilename?: string
-  ): Promise<string | null> => {
-    if (!file) return null;
-    const body = new FormData();
-    body.append('file', file);
-    body.append('subfolder', subfolder);
-    if (customFilename) body.append('filename', customFilename);
-    const res = await fetch('/api/upload', { method: 'POST', body });
-    if (!res.ok) {
-      const msg = await res.json().catch(() => ({ error: 'Upload failed' }));
-      throw new Error(msg.error ?? 'Upload failed');
-    }
-    const { url } = await res.json();
-    return url as string;
-  };
-
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
     try {
-      const { photoUpload, nationalityDocumentUpload, ...payload } = formData;
+      const {
+        photoUpload,
+        nationalityDocumentUpload,
+        docBirthCertificate,
+        docNationalId,
+        docPassport,
+        ...payload
+      } = formData;
 
-      payload.fullNameKhmer = buildFullNameKhmer(payload.firstNameKhmer, payload.lastNameKhmer);
-      payload.fullNameEnglish = buildFullNameLatin(payload.firstNameLatin, payload.lastNameLatin);
-
-      // FIX: Use IndexedDB slots — React state File objects are lost between steps
-      const photoFile = slots.photoUpload;
-
-      // FIX: Pick first available doc across all checked slots, in priority order
-      const docFile =
-        slots.nationalityDocumentUpload ??
-        slots.docBirthCertificate ??
-        slots.docNationalId ??
-        slots.docPassport ??
-        null;
-
-      const photoUuid = crypto.randomUUID();
-      const [uploadedPhotoUrl, uploadedDocUrl] = await Promise.all([
-        uploadFileToServer(photoFile, 'img', `${photoUuid}_pic.jpg`),
-        uploadFileToServer(docFile, 'registrations/documents'),
-      ]);
-
-      const result = await submitRegistrationAction(payload, uploadedPhotoUrl, uploadedDocUrl);
+      const result = await submitRegistrationAction(
+        payload,
+        photoUpload ?? null,
+        // DB has ONE documents_path varchar — pick the first uploaded doc
+        docBirthCertificate ?? docNationalId ?? docPassport ?? nationalityDocumentUpload ?? null
+      );
 
       if (result.success && result.enrollId) {
-        await PhotoStorage.clear();
         onSuccess(result.enrollId);
       } else {
         setError(result.error ?? 'ការដាក់ស្នើបរាជ័យ');
       }
-    } catch (err) {
-      console.error('[ConfirmationStep] handleSubmit error:', err);
-      setError(err instanceof Error ? err.message : 'ការដាក់ស្នើបរាជ័យ');
+    } catch {
+      setError('ការដាក់ស្នើបរាជ័យ');
     } finally {
       setLoading(false);
     }
@@ -298,149 +220,130 @@ export function ConfirmationStep({ formData, onEdit, onSuccess }: ConfirmationSt
 
   const roleLabel = resolveRoleLabel(formData);
 
-  // FIX: idDocType is never set in the form. Derive a readable label from
-  // the checked doc keys stored in formData.nationality (comma-separated).
-  const DOC_KEY_TO_KHMER: Record<string, string> = {
-    docNationalId: 'យ្រើកអត្តសញ្ញាតប័ណ្ណ',
-    docBirthCertificate: 'សំបុត្រგំណើត',
-    docPassport: 'លិខិតឆ្លងត្ណើន',
-    nationalityDocumentUpload: 'ឡកសារជាតិសញ្ញាតិ',
-  };
-  const selectedDocKeys = formData.nationality
-    ? formData.nationality.split(',').filter(Boolean)
-    : [];
-  const idDocLabel =
-    (formData.idDocType ? (ID_DOC_LABELS[formData.idDocType] ?? formData.idDocType) : null) ||
-    selectedDocKeys
-      .map((k) => DOC_KEY_TO_KHMER[k])
-      .filter(Boolean)
-      .join(', ') ||
-    '—';
-
-  // FIX: Status now reads from IndexedDB slots, not React state
-  const hasDoc = (key: PhotoSlotKey): string => {
-    if (!slotsLoaded) return '...';
-    return slots[key] ? '✓ បានបញ្ចូល' : 'មិនទាន់';
-  };
-
-  const DOC_LABELS: Record<string, string> = {
-    docBirthCertificate: 'សំបុត្រកំណើត',
-    docNationalId: 'អត្តសញ្ញាណប័ណ្ណ',
-    docPassport: 'លិខិតឆ្លងដែន',
-    nationalityDocumentUpload: 'ឯកសារជាតិសញ្ជាតិ',
-  };
-
-  const DOC_KEYS: PhotoSlotKey[] = [
-    'docBirthCertificate',
-    'docNationalId',
-    'docPassport',
-    'nationalityDocumentUpload',
-  ];
-
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-6">
       <StepHeader title="បញ្ជាក់ការចុះឈ្មោះ" subtitle="សូមពិនិត្យព័ត៌មានមុនបញ្ជូន" />
 
       <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
         <AlertCircle className="h-4 w-4 shrink-0" />
-        <span>ពិនិត្យព័ត៌មានឱ្យបានត្រឹមត្រូវ</span>
+        <span>
+          ពិនិត្យព័ត៌មានឱ្យបានត្រឹមត្រូវ — Please verify all information before submitting.
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        {/* ── Left: summary ────────────────────────────────── */}
-        <div className="space-y-4">
-          <SectionCard title="ព្រឹត្តិការណ៍ និង កីឡា">
+      {/* Two-column: left = info, right = card preview */}
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* ─── Left: All information ─────────────────────── */}
+        <div className="flex-1 space-y-4">
+          {/* Event & Sport */}
+          <SectionCard title="ព្រឹត្តិការណ៍ និង កីឡា / Event & Sport">
             <InfoRow label="ព្រឹត្តិការណ៍" value={formData.eventName} onEdit={() => onEdit(0)} />
             <InfoRow label="ស្ថាប័ន" value={formData.organizationName} onEdit={() => onEdit(1)} />
             <InfoRow label="កីឡា" value={formData.sportName} onEdit={() => onEdit(2)} />
             <InfoRow label="ប្រភេទ" value={formData.categoryName} onEdit={() => onEdit(3)} />
           </SectionCard>
 
-          <SectionCard title="ព័ត៌មានផ្ទាល់ខ្លួន">
-            <InfoRow
-              label="នាម (ខ្មែរ)"
-              value={formData.firstNameKhmer || '—'}
-              onEdit={() => onEdit(4)}
-            />
-            <InfoRow
-              label="គោត្តនាម (ខ្មែរ)"
-              value={formData.lastNameKhmer || '—'}
-              onEdit={() => onEdit(4)}
-            />
-            <InfoRow
-              label="នាម (ឡាតាំង)"
-              value={formData.firstNameLatin || '—'}
-              onEdit={() => onEdit(4)}
-            />
-            <InfoRow
-              label="គោត្តនាម (ឡាតាំង)"
-              value={formData.lastNameLatin || '—'}
-              onEdit={() => onEdit(4)}
-            />
-            <InfoRow
-              label="ភេទ"
-              value={formData.gender ? (GENDER_LABELS[formData.gender] ?? formData.gender) : '—'}
-              onEdit={() => onEdit(4)}
-            />
-            <InfoRow
-              label="ថ្ងៃ ខែ ឆ្នាំ"
-              value={formData.dateOfBirth || '—'}
-              onEdit={() => onEdit(4)}
-            />
-            <InfoRow
-              label="លេខអត្តសញ្ញាណ"
-              value={formData.nationalID || '—'}
-              onEdit={() => onEdit(4)}
-            />
-            <InfoRow label="ទូរស័ព្ទ" value={formData.phone || '—'} onEdit={() => onEdit(4)} />
-            <InfoRow label="ប្រភេទឯកសារ" value={idDocLabel} onEdit={() => onEdit(4)} />
-            <InfoRow label="តួនាទី" value={roleLabel} onEdit={() => onEdit(4)} />
+          {/* Name */}
+          <SectionCard title="ឈ្មោះ / Name">
+            <div className="grid grid-cols-2 gap-x-6">
+              <div>
+                <p className="mb-0.5 text-xs text-slate-400">នាមខ្លួន (ខ្មែរ)</p>
+                <p className="text-sm font-medium text-slate-800">
+                  {formData.firstNameKhmer || '—'}
+                </p>
+              </div>
+              <div>
+                <p className="mb-0.5 text-xs text-slate-400">First Name</p>
+                <p className="text-sm font-medium text-slate-800">
+                  {formData.firstNameLatin || '—'}
+                </p>
+              </div>
+              <div className="mt-2">
+                <p className="mb-0.5 text-xs text-slate-400">នាមត្រកូល (ខ្មែរ)</p>
+                <p className="text-sm font-medium text-slate-800">
+                  {formData.lastNameKhmer || '—'}
+                </p>
+              </div>
+              <div className="mt-2">
+                <p className="mb-0.5 text-xs text-slate-400">Last Name</p>
+                <p className="text-sm font-medium text-slate-800">
+                  {formData.lastNameLatin || '—'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onEdit(4)}
+              className="mt-2 flex items-center gap-1 text-xs text-indigo-500 hover:underline"
+            >
+              <Edit2 className="h-3 w-3" /> Edit name
+            </button>
           </SectionCard>
 
-          <SectionCard title="ឯកសារ">
-            {/* Portrait — read from IndexedDB slot */}
-            <InfoRow label="រូបថត" value={hasDoc('photoUpload')} onEdit={() => onEdit(4)} />
-
-            {/* Each doc — read from IndexedDB slot, not React state */}
-            {(() => {
-              const selectedKeys = formData.nationality ? formData.nationality.split(',') : [];
-              const selectedDocs = DOC_KEYS.filter((k) => selectedKeys.includes(k));
-              if (selectedDocs.length === 0) {
-                return (
-                  <InfoRow
-                    label="ឯកសារផ្ទៀងផ្ទាត់"
-                    value="មិនបានជ្រើសរើស"
-                    onEdit={() => onEdit(4)}
-                  />
-                );
+          {/* Identity & Contact */}
+          <SectionCard title="អត្តសញ្ញាណ & ទំនាក់ទំនង / Identity & Contact">
+            <InfoRow
+              label="ភេទ / Gender"
+              value={
+                GENDER_LABELS[formData.gender as keyof typeof GENDER_LABELS] ?? formData.gender
               }
-              return selectedDocs.map((key) => (
-                <InfoRow
-                  key={key}
-                  label={DOC_LABELS[key]}
-                  value={hasDoc(key)}
-                  onEdit={() => onEdit(4)}
-                />
-              ));
-            })()}
+              onEdit={() => onEdit(4)}
+            />
+            <InfoRow
+              label="ថ្ងៃកំណើត / DOB"
+              value={formData.dateOfBirth}
+              onEdit={() => onEdit(4)}
+            />
+            <InfoRow
+              label="លេខអត្តសញ្ញាណ / National ID"
+              value={formData.nationalID}
+              onEdit={() => onEdit(4)}
+            />
+            <InfoRow label="ទូរស័ព្ទ / Phone" value={formData.phone} onEdit={() => onEdit(4)} />
+          </SectionCard>
+
+          {/* Position */}
+          <SectionCard title="តួនាទី / Position">
+            <InfoRow label="Position" value={roleLabel} onEdit={() => onEdit(4)} />
+          </SectionCard>
+
+          {/* Documents uploaded */}
+          <SectionCard title="ឯកសារ / Documents">
+            <InfoRow
+              label="រូបថត / Photo"
+              value={formData.photoUpload ? `✓ ${formData.photoUpload.name}` : 'Not uploaded'}
+              onEdit={() => onEdit(4)}
+            />
+            <InfoRow
+              label="ប្រភេទឯកសារ / Doc Type"
+              value={
+                formData.idDocType
+                  ? (ID_DOC_LABELS[formData.idDocType as keyof typeof ID_DOC_LABELS] ??
+                    formData.idDocType)
+                  : '—'
+              }
+              onEdit={() => onEdit(4)}
+            />
+            <InfoRow
+              label="ឯកសារ / Document"
+              value={
+                (formData.docBirthCertificate ??
+                formData.docNationalId ??
+                formData.docPassport ??
+                formData.nationalityDocumentUpload)
+                  ? `✓ ${(formData.docBirthCertificate ?? formData.docNationalId ?? formData.docPassport ?? formData.nationalityDocumentUpload)!.name}`
+                  : 'Not uploaded'
+              }
+              onEdit={() => onEdit(4)}
+            />
           </SectionCard>
         </div>
 
-        {/* ── Right: card preview ───────────────────────────── */}
-        <div className="flex flex-col items-center">
-          <div className="sticky top-4 flex flex-col items-center gap-3">
-            <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
-              ម៉ូតប័ណ្ណ · Card Preview
-            </p>
-            <IDCardPreview formData={formData} photoUrl={photoPreviewUrl} />
-            <button
-              type="button"
-              onClick={() => onEdit(4)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white py-2 text-xs text-slate-500 transition-colors hover:border-indigo-300 hover:text-indigo-600"
-            >
-              <Edit2 className="h-3 w-3" /> កែប្រែព័ត៌មាន
-            </button>
-          </div>
+        {/* ─── Right: ID Card Preview ────────────────────── */}
+        <div className="flex flex-col items-center pt-2 lg:w-72">
+          <p className="mb-4 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            Card Preview
+          </p>
+          <IDCardPreview formData={formData} onEdit={() => onEdit(4)} />
         </div>
       </div>
 
@@ -452,21 +355,18 @@ export function ConfirmationStep({ formData, onEdit, onSuccess }: ConfirmationSt
 
       <div className="flex justify-center gap-3 pt-2">
         <Button variant="outline" onClick={() => onEdit(4)} disabled={loading}>
-          កែសម្រួល
+          កែសម្រួល / Edit
         </Button>
-        {/* Disabled until IndexedDB slots finish loading */}
-        <Button onClick={handleSubmit} disabled={loading || !slotsLoaded} className="min-w-40">
+        <Button onClick={handleSubmit} disabled={loading} className="min-w-44">
           {loading ? (
             <span className="flex items-center gap-2">
-              <span className="animate-spin">⏳</span> កំពុងបញ្ជូន...
-            </span>
-          ) : !slotsLoaded ? (
-            <span className="flex items-center gap-2">
-              <span className="animate-pulse">⏳</span> កំពុងផ្ទុក...
+              <span className="animate-spin">⏳</span>
+              កំពុងបញ្ជូន...
             </span>
           ) : (
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" /> បញ្ជាក់ ចុះឈ្មោះ
+              <CheckCircle2 className="h-4 w-4" />
+              បញ្ជាក់ ចុះឈ្មោះ / Confirm
             </span>
           )}
         </Button>

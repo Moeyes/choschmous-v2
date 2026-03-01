@@ -1,7 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarDays, Medal, Trophy, UserRound, Users, Building2, RefreshCw, ArrowRight } from 'lucide-react';
+import {
+  CalendarDays,
+  Medal,
+  Trophy,
+  UserRound,
+  Users,
+  Building2,
+  RefreshCw,
+  ArrowRight,
+  MapPinned,
+} from 'lucide-react';
 import { Button } from '@/ui/design-system/primitives/Button';
 import { StatCard } from '@/ui/components/data-display/StatCard';
 import { ROUTES } from '@/config/routes';
@@ -21,6 +31,14 @@ function formatDate(iso: string) {
 export function DashboardOverview({ role }: DashboardOverviewProps) {
   const { data, isLoading, error, reload } = useDashboardData();
   const routes = role === 'superadmin' ? ROUTES.SUPERADMIN : ROUTES.ADMIN;
+  const modules = [
+    { label: 'Dashboard', href: routes.ROOT, helper: 'Overview and reports' },
+    { label: 'Events', href: routes.EVENTS, helper: 'Manage competition events' },
+    { label: 'Sports', href: routes.SPORTS, helper: 'Manage sport master list' },
+    { label: 'Participants', href: routes.PARTICIPANTS, helper: 'Review participant records' },
+    { label: 'Provinces', href: routes.PROVINCES, helper: 'Browse by organization region' },
+    { label: 'Survey', href: routes.SURVEY, helper: 'Survey and intake flow' },
+  ];
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -89,7 +107,7 @@ export function DashboardOverview({ role }: DashboardOverviewProps) {
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-6">
         <div className="rounded-2xl border bg-card p-6 shadow-sm xl:col-span-3">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Latest Events</h2>
@@ -110,12 +128,52 @@ export function DashboardOverview({ role }: DashboardOverviewProps) {
                   <p className="font-medium text-foreground">{event.name}</p>
                   <p className="text-xs text-muted-foreground">{event.type || 'General event'}</p>
                 </div>
-                <p className="text-xs text-muted-foreground">{formatDate(event.createdAt)}</p>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">{formatDate(event.createdAt)}</p>
+                  <Link
+                    href={routes.EVENT(String(event.id))}
+                    className="mt-1 inline-flex text-xs font-medium text-primary hover:underline"
+                  >
+                    Open
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
+        <div className="rounded-2xl border bg-card p-6 shadow-sm xl:col-span-3">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Latest Sports</h2>
+            <Button asChild variant="ghost" size="sm">
+              <Link href={routes.SPORTS}>View all</Link>
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {!isLoading && data.sports.length === 0 && (
+              <p className="rounded-xl bg-muted px-4 py-6 text-center text-sm text-muted-foreground">
+                No sport records available.
+              </p>
+            )}
+            {data.sports.map((sport) => (
+              <div key={sport.id} className="flex items-center justify-between rounded-xl border bg-background px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Medal className="h-4 w-4 text-primary" />
+                  <p className="font-medium text-foreground">{sport.name}</p>
+                </div>
+                <Link
+                  href={routes.SPORT(String(sport.id))}
+                  className="inline-flex text-xs font-medium text-primary hover:underline"
+                >
+                  Open
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-5">
         <div className="space-y-6 xl:col-span-2">
           <div className="rounded-2xl border bg-card p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold">Top Organizations</h2>
@@ -125,7 +183,10 @@ export function DashboardOverview({ role }: DashboardOverviewProps) {
               )}
               {data.topOrganizations.map((item) => (
                 <div key={item.name} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-                  <p className="line-clamp-1 text-sm font-medium">{item.name}</p>
+                  <p className="line-clamp-1 text-sm font-medium">
+                    <MapPinned className="mr-1 inline h-4 w-4 text-primary/70" />
+                    {item.name}
+                  </p>
                   <p className="text-xs text-muted-foreground">{item.participants} participants</p>
                 </div>
               ))}
@@ -159,7 +220,33 @@ export function DashboardOverview({ role }: DashboardOverviewProps) {
                   <Trophy className="h-4 w-4" />
                 </Link>
               </Button>
+              <Button asChild variant="outline" className="justify-between">
+                <Link href={routes.PROVINCES}>
+                  Open Provinces
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-6 shadow-sm xl:col-span-3">
+          <h2 className="mb-4 text-lg font-semibold">Portal Modules</h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {modules.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="group rounded-xl border bg-background p-4 transition-colors hover:bg-muted/40"
+              >
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{item.helper}</p>
+                <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                  Open
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                </p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

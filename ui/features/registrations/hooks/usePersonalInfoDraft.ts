@@ -41,6 +41,7 @@ export type PersonalInfoDraft = Pick<
   | 'role'
   | 'leaderRole'
   | 'athleteCategory'
+  | 'selectedDocKeys'
 >;
 
 // ── File-only draft (all keys come from RegistrationFormData) ─
@@ -74,6 +75,7 @@ const EMPTY_TEXT_DRAFT: PersonalInfoDraft = {
   role: '',
   leaderRole: '',
   athleteCategory: '',
+  selectedDocKeys: '',
 };
 
 const EMPTY_PHOTOS: PhotoDraftSlots = {

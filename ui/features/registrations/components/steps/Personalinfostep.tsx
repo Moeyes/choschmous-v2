@@ -7,7 +7,10 @@
  *  1. Gender error clears immediately on selection
  *  2. Photo error clears immediately on upload
  *  3. Athlete role uses radio, auto-sets category from gender
- *  4. FIX: idDocType synced when document checkboxes change
+ *  4. idDocType synced when document checkboxes change
+ *  5. FIX: doc checkbox selection stored in `selectedDocKeys` NOT `nationality`
+ *     Previously `nationality` was being overwritten with doc key strings like
+ *     "docNationalId,docBirthCertificate" which corrupted enrollments.nationality
  */
 
 import { useRef, useState, useCallback } from 'react';
@@ -60,7 +63,7 @@ const VERIFY_DOCS: {
   },
 ];
 
-// FIX: Map doc checkbox keys to idDocType enum values used by the backend
+// Map doc checkbox keys to idDocType enum values for the backend
 const DOC_KEY_TO_IDTYPE: Record<string, string> = {
   docNationalId: 'IDCard',
   docBirthCertificate: 'BirthCertificate',
@@ -401,7 +404,10 @@ export function PersonalInfoStep({ formData, setFields, errors, onNext, clearErr
         <p className="mb-3 text-xs text-slate-500">គូសលើឯកសារដែលអ្នកមាន រួចបញ្ចូលឯកសារខាងក្រោម</p>
         <div className="grid grid-cols-2 gap-3">
           {VERIFY_DOCS.map((doc) => {
-            const selectedKeys = textDraft.nationality ? textDraft.nationality.split(',') : [];
+            // FIX: read from selectedDocKeys — NOT nationality
+            const selectedKeys = textDraft.selectedDocKeys
+              ? textDraft.selectedDocKeys.split(',')
+              : [];
             const isChecked = selectedKeys.includes(doc.key);
             return (
               <label
@@ -424,11 +430,10 @@ export function PersonalInfoStep({ formData, setFields, errors, onNext, clearErr
                       handlePhoto(doc.key, null);
                     }
                     const cleanNext = next.filter(Boolean);
-                    // FIX: sync idDocType from the first checked doc key so
-                    // ConfirmationStep and the backend both receive the correct value
                     const firstIdType = (cleanNext.map((k) => DOC_KEY_TO_IDTYPE[k]).find(Boolean) ??
                       '') as IdDocType | '';
-                    sync({ nationality: cleanNext.join(','), idDocType: firstIdType });
+                    // FIX: write to selectedDocKeys — nationality stays as real nationality
+                    sync({ selectedDocKeys: cleanNext.join(','), idDocType: firstIdType });
                   }}
                 />
                 <doc.Icon className="h-4 w-4 text-slate-500" />
@@ -542,7 +547,10 @@ export function PersonalInfoStep({ formData, setFields, errors, onNext, clearErr
             </div>
 
             {(() => {
-              const selectedKeys = textDraft.nationality ? textDraft.nationality.split(',') : [];
+              // FIX: read from selectedDocKeys — NOT nationality
+              const selectedKeys = textDraft.selectedDocKeys
+                ? textDraft.selectedDocKeys.split(',')
+                : [];
               const selectedDocs = VERIFY_DOCS.filter((d) => selectedKeys.includes(d.key));
               if (selectedDocs.length === 0)
                 return (

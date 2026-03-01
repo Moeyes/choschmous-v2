@@ -17,7 +17,7 @@ export const ROUTES = {
     LOGIN: '/login',
   },
   ADMIN: {
-    ROOT: '/admin', 
+    ROOT: '/admin',
     EVENTS: '/admin/events',
     EVENT: (id: string) => `/admin/events/${id}`,
     SPORTS: '/admin/sports',
@@ -35,6 +35,15 @@ export const ROUTES = {
     PARTICIPANTS: '/superadmin/participants',
     PROVINCES: '/superadmin/provinces',
     SURVEY: '/superadmin/survey',
+    USER: (id: string) => `/superadmin/users/${id}`,
+    ORGANIZATIONS: '/superadmin/organizations',
+    ORGANIZATION: (id: string) => `/superadmin/organizations/${id}`,
+    CATEGORIES: '/superadmin/categories',
+    MEDALS: '/superadmin/medals',
+    LEADERBOARD: '/superadmin/leaderboard',
+    ASSIGNMENTS: '/superadmin/assignments', // sports_event_org
+    SESSIONS: '/superadmin/sessions', // refresh_tokens
+    DASHBOARD: '/superadmin/dashboard',
   },
   API: {
     LOGIN: '/api/auth/login',
@@ -48,5 +57,10 @@ export const ROUTES = {
     ORGANIZATIONS: '/api/organizations',
     SURVEYS: '/api/surveys',
     DASHBOARD: '/api/dashboard',
+    CATEGORIES: '/admin/categories',
+    USERS: '/admin/users',
+    MEDALS: '/admin/medals',
+    LEADERBOARD: '/admin/leaderboard', // from participation_per_sport + medals
+    SPORT_EVENT_ORGS: '/admin/assignments',
   },
 } as const;
