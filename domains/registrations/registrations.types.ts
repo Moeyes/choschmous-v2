@@ -8,7 +8,7 @@
 
 export type RegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type Gender = 'Male' | 'Female';
-export type IdDocType = 'IDCard' | 'BirthCertificate';
+export type IdDocType = 'IDCard' | 'BirthCertificate'| 'Passport' | 'FamilyBook' | 'Other';
 export type PositionRole = 'Athlete' | 'Leader' | 'Technical';
 export type AthleteCategory = 'Male' | 'Female'; // maps to gender-based category
 export type LeaderRole =

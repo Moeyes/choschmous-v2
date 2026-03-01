@@ -1,6 +1,19 @@
 'use client';
 
+/**
+ * Personalinfostep.tsx
+ *
+ * Fixes:
+ *  1. Gender error clears immediately on selection
+ *  2. Photo error clears immediately on upload
+ *  3. Athlete role uses radio, auto-sets category from gender
+ *  4. FIX: idDocType synced when document checkboxes change
+ */
+
+import { useRef, useState, useCallback } from 'react';
+import { Upload, X, FileText, CreditCard, BookOpen, CheckCircle2, Flag } from 'lucide-react';
 import { Input } from '@/ui/design-system/primitives/Input';
+import { Checkbox } from '@/ui/design-system/primitives/checkbox';
 import { Field, NativeSelect } from '@/ui/components/layout/FormControls';
 import {
   SectionCard,
@@ -8,10 +21,8 @@ import {
   ActionFooter,
   Grid,
 } from '@/ui/components/layout/LayoutPrimitives';
-import { PhotoUpload, NationalityDocumentUpload } from '../shared/Uploads';
 import {
   GENDER_OPTIONS,
-  NATIONALITY_OPTIONS,
   LEADER_ROLE_OPTIONS,
 } from '@/ui/features/registrations/types/Registration.types';
 import type {
@@ -19,217 +30,570 @@ import type {
   Gender,
   LeaderRole,
   AthleteCategory,
+  RegistrationFormData,
+  IdDocType,
 } from '@/ui/features/registrations/types/Registration.types';
+import { usePersonalInfoDraft } from '@/ui/features/registrations/hooks/usePersonalInfoDraft';
+import type { PhotoSlotKey } from '@/ui/features/registrations/hooks/usePersonalInfoDraft';
 
-// ─── Component ────────────────────────────────────────────────
+// ─── Verification document slot config ───────────────────────
 
-export function PersonalInfoStep({ formData, setFields, errors, onNext }: StepProps) {
-  const isAthlete = formData.role === 'Athlete';
+const VERIFY_DOCS: {
+  key: PhotoSlotKey;
+  label: string;
+  labelEn: string;
+  Icon: React.ElementType;
+}[] = [
+  {
+    key: 'docBirthCertificate',
+    label: 'សំបុត្រកំណើត',
+    labelEn: 'Birth Certificate',
+    Icon: BookOpen,
+  },
+  { key: 'docNationalId', label: 'អត្តសញ្ញាណប័ណ្ណ', labelEn: 'National ID', Icon: CreditCard },
+  { key: 'docPassport', label: 'លិខិតឆ្លងដែន', labelEn: 'Passport', Icon: FileText },
+  {
+    key: 'nationalityDocumentUpload',
+    label: 'ឯកសារជាតិសញ្ជាតិ',
+    labelEn: 'Nationality Document',
+    Icon: Flag,
+  },
+];
+
+// FIX: Map doc checkbox keys to idDocType enum values used by the backend
+const DOC_KEY_TO_IDTYPE: Record<string, string> = {
+  docNationalId: 'IDCard',
+  docBirthCertificate: 'BirthCertificate',
+  docPassport: 'Passport',
+  nationalityDocumentUpload: 'BirthCertificate',
+};
+
+// ─── Portrait upload (4×6) ────────────────────────────────────
+
+interface PortraitUploadProps {
+  file: File | null;
+  slotId: string;
+  onFile: (f: File | null) => void;
+  error?: string;
+}
+
+export function PortraitUpload({ file, slotId, onFile, error }: PortraitUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(() =>
+    file ? URL.createObjectURL(file) : null
+  );
+
+  const handle = useCallback(
+    (incoming: File) => {
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(incoming);
+      });
+      onFile(incoming);
+    },
+    [onFile]
+  );
+
+  const clear = useCallback(() => {
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    onFile(null);
+  }, [onFile]);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="font-mono text-[9px] text-slate-300 select-all" title="Storage slot ID">
+        {slotId}
+      </p>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload portrait photo"
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const f = e.dataTransfer.files[0];
+          if (f) handle(f);
+        }}
+        className={[
+          'relative cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-200',
+          'shadow-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none',
+          error
+            ? 'border-red-400 bg-red-50'
+            : 'border-slate-300 bg-white hover:border-indigo-400 hover:bg-indigo-50',
+        ].join(' ')}
+        style={{ width: 128, height: 180 }}
+      >
+        {previewUrl ? (
+          <>
+            <img src={previewUrl} alt="Portrait preview" className="h-full w-full object-cover" />
+            <button
+              type="button"
+              aria-label="Remove photo"
+              onClick={(e) => {
+                e.stopPropagation();
+                clear();
+              }}
+              className="absolute top-1.5 right-1.5 rounded-full bg-red-500 p-1 text-white shadow-lg transition-colors hover:bg-red-600"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-3 p-4">
+            <svg
+              viewBox="0 0 60 80"
+              className="w-14 text-slate-200"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <circle cx="30" cy="22" r="15" />
+              <ellipse cx="30" cy="62" rx="24" ry="18" />
+            </svg>
+            <div className="text-center">
+              <p className="text-[11px] font-medium text-slate-500">រូបថត ៤×៦</p>
+              <p className="text-[10px] text-slate-400">ចុច ឬ អូស</p>
+            </div>
+          </div>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handle(f);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <p className="text-[10px] text-slate-400">PNG / JPG · ≤ 5 MB</p>
+    </div>
+  );
+}
+
+// ─── Doc upload slot ──────────────────────────────────────────
+
+interface DocUploadSlotProps {
+  label: string;
+  labelEn: string;
+  Icon: React.ElementType;
+  slotId: string;
+  file: File | null;
+  onFile: (f: File | null) => void;
+  error?: string;
+}
+
+export function DocUploadSlot({
+  label,
+  labelEn,
+  Icon,
+  slotId,
+  file,
+  onFile,
+  error,
+}: DocUploadSlotProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handle = useCallback(
+    (incoming: File) => {
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return incoming.type.startsWith('image/') ? URL.createObjectURL(incoming) : null;
+      });
+      onFile(incoming);
+    },
+    [onFile]
+  );
+
+  const clear = useCallback(() => {
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    onFile(null);
+  }, [onFile]);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`Upload ${labelEn}`}
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const f = e.dataTransfer.files[0];
+          if (f) handle(f);
+        }}
+        className={[
+          'relative flex min-h-27.5 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-3',
+          'transition-all duration-200 focus:ring-2 focus:ring-indigo-400 focus:outline-none',
+          error
+            ? 'border-red-300 bg-red-50'
+            : file
+              ? 'border-emerald-400 bg-emerald-50'
+              : 'border-slate-200 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50',
+        ].join(' ')}
+      >
+        {previewUrl && (
+          <img src={previewUrl} alt={labelEn} className="mb-1 h-12 w-full rounded object-contain" />
+        )}
+        {file && !previewUrl ? (
+          <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+        ) : !previewUrl ? (
+          <Icon className="h-6 w-6 text-slate-400" />
+        ) : null}
+        <p className="text-center text-[11px] leading-tight font-semibold text-slate-700">
+          {label}
+        </p>
+        <p className="text-center text-[10px] text-slate-400">{labelEn}</p>
+        {file ? (
+          <p className="max-w-full truncate px-2 text-center text-[10px] text-emerald-600">
+            ✓ {file.name}
+          </p>
+        ) : (
+          <span className="flex items-center gap-1 text-[10px] text-slate-400">
+            <Upload className="h-3 w-3" /> ចុច ឬ អូស
+          </span>
+        )}
+        {file && (
+          <button
+            type="button"
+            aria-label={`Remove ${labelEn}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              clear();
+            }}
+            className="absolute top-1.5 right-1.5 rounded-full bg-red-100 p-0.5 text-red-500 hover:bg-red-200"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,.pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handle(f);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      <p className="text-center font-mono text-[9px] text-slate-300 select-all">{slotId}</p>
+      {error && <p className="text-center text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+// ─── PersonalInfoStep ─────────────────────────────────────────
+
+export function PersonalInfoStep({ formData, setFields, errors, onNext, clearErrors }: StepProps) {
+  const sessionKey = `${formData.eventId || 'evt'}_${formData.organizationId || 'org'}`;
+  const { textDraft, photos, photosLoaded, setTextField, setPhotoSlot, getSlotId } =
+    usePersonalInfoDraft(sessionKey);
+
+  const isAthlete = textDraft.role === 'Athlete';
+  const isLeader = textDraft.role === 'Leader';
+
+  const sync = useCallback(
+    (patch: Parameters<typeof setTextField>[0]) => {
+      setTextField(patch);
+      setFields(patch);
+      if (clearErrors) clearErrors(Object.keys(patch) as (keyof RegistrationFormData)[]);
+    },
+    [setTextField, setFields, clearErrors]
+  );
+
+  const handleGenderChange = useCallback(
+    (v: string) => {
+      const patch: Parameters<typeof setTextField>[0] = {
+        gender: v as Gender,
+        athleteCategory: v as AthleteCategory,
+      };
+      if (isAthlete) patch.athleteCategory = v as AthleteCategory;
+      sync(patch);
+    },
+    [sync, isAthlete]
+  );
+
+  const handleLeaderRoleChange = useCallback(
+    (value: string) => {
+      sync({ role: 'Leader', leaderRole: value as LeaderRole, athleteCategory: '' });
+    },
+    [sync]
+  );
+
+  const handleAthleteSelect = useCallback(() => {
+    sync({ role: 'Athlete', leaderRole: '', athleteCategory: textDraft.gender as AthleteCategory });
+  }, [sync, textDraft.gender]);
+
+  const handleClearRole = useCallback(() => {
+    sync({ role: '', leaderRole: '', athleteCategory: '' });
+  }, [sync]);
+
+  const handlePhoto = useCallback(
+    async (key: PhotoSlotKey, file: File | null) => {
+      await setPhotoSlot(key, file);
+      setFields({ [key]: file });
+      if (file && clearErrors) clearErrors([key]);
+    },
+    [setPhotoSlot, setFields, clearErrors]
+  );
+
+  const canProceed =
+    !!textDraft.firstNameKhmer ||
+    !!textDraft.lastNameKhmer ||
+    !!textDraft.firstNameLatin ||
+    !!textDraft.lastNameLatin;
 
   return (
     <div className="space-y-5">
       <StepHeader title="ព័ត៌មានផ្ទាល់ខ្លួន" subtitle="បំពេញព័ត៌មានអ្នកចូលរួម" />
 
-      <NameSection formData={formData} setFields={setFields} errors={errors} />
-      <IdentitySection formData={formData} setFields={setFields} errors={errors} />
-      <ContactSection formData={formData} setFields={setFields} errors={errors} />
-      <RoleSection
-        formData={formData}
-        setFields={setFields}
-        errors={errors}
-        isAthlete={isAthlete}
-      />
-      <DocumentsSection formData={formData} setFields={setFields} errors={errors} />
+      {/* ── Names ──────────────────────────────────────────── */}
+      <SectionCard title="ឈ្មោះ">
+        <Grid cols={2}>
+          <Field label="នាម (ខ្មែរ)" error={errors.firstNameKhmer}>
+            <Input
+              placeholder="នាម"
+              value={textDraft.firstNameKhmer}
+              onChange={(e) => sync({ firstNameKhmer: e.target.value })}
+            />
+          </Field>
+          <Field label="នាម (ឡាតាំង)" error={errors.firstNameLatin}>
+            <Input
+              placeholder="First name"
+              value={textDraft.firstNameLatin}
+              onChange={(e) => sync({ firstNameLatin: e.target.value })}
+            />
+          </Field>
+          <Field label="គោត្តនាម (ខ្មែរ)" error={errors.lastNameKhmer}>
+            <Input
+              placeholder="គោត្តនាម"
+              value={textDraft.lastNameKhmer}
+              onChange={(e) => sync({ lastNameKhmer: e.target.value })}
+            />
+          </Field>
+          <Field label="គោត្តនាម (ឡាតាំង)" error={errors.lastNameLatin}>
+            <Input
+              placeholder="Last name"
+              value={textDraft.lastNameLatin}
+              onChange={(e) => sync({ lastNameLatin: e.target.value })}
+            />
+          </Field>
+        </Grid>
+      </SectionCard>
 
+      {/* ── Document selection (checkboxes) ─────────────────── */}
+      <SectionCard title="ជ្រើសរើសឯកសារដែលមាន">
+        <p className="mb-3 text-xs text-slate-500">គូសលើឯកសារដែលអ្នកមាន រួចបញ្ចូលឯកសារខាងក្រោម</p>
+        <div className="grid grid-cols-2 gap-3">
+          {VERIFY_DOCS.map((doc) => {
+            const selectedKeys = textDraft.nationality ? textDraft.nationality.split(',') : [];
+            const isChecked = selectedKeys.includes(doc.key);
+            return (
+              <label
+                key={doc.key}
+                className={[
+                  'flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
+                  isChecked
+                    ? 'border-indigo-400 bg-indigo-50'
+                    : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50',
+                ].join(' ')}
+              >
+                <Checkbox
+                  checked={isChecked}
+                  onCheckedChange={(checked) => {
+                    let next: string[];
+                    if (checked) {
+                      next = [...selectedKeys, doc.key];
+                    } else {
+                      next = selectedKeys.filter((k) => k !== doc.key);
+                      handlePhoto(doc.key, null);
+                    }
+                    const cleanNext = next.filter(Boolean);
+                    // FIX: sync idDocType from the first checked doc key so
+                    // ConfirmationStep and the backend both receive the correct value
+                    const firstIdType = (cleanNext.map((k) => DOC_KEY_TO_IDTYPE[k]).find(Boolean) ??
+                      '') as IdDocType | '';
+                    sync({ nationality: cleanNext.join(','), idDocType: firstIdType });
+                  }}
+                />
+                <doc.Icon className="h-4 w-4 text-slate-500" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700">{doc.label}</p>
+                  <p className="text-[10px] text-slate-400">{doc.labelEn}</p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </SectionCard>
+
+      {/* ── Contact & DOB ──────────────────────────────────── */}
+      <SectionCard title="កំណើត និង ទំនាក់ទំនង">
+        <Grid cols={2}>
+          <Field label="ភេទ" error={errors.gender}>
+            <NativeSelect
+              value={textDraft.gender}
+              onChange={handleGenderChange}
+              options={GENDER_OPTIONS}
+              placeholder="ជ្រើសភេទ"
+            />
+          </Field>
+          <Field label="ថ្ងៃ ខែ ឆ្នាំកំណើត" error={errors.dateOfBirth}>
+            <Input
+              type="date"
+              value={textDraft.dateOfBirth}
+              onChange={(e) => sync({ dateOfBirth: e.target.value })}
+            />
+          </Field>
+          <Field label="លេខអត្តសញ្ញាណ" error={errors.nationalID}>
+            <Input
+              placeholder="xxxxxxxxxxxxxx"
+              value={textDraft.nationalID}
+              onChange={(e) => sync({ nationalID: e.target.value })}
+            />
+          </Field>
+          <Field label="ទូរស័ព្ទ" error={errors.phone}>
+            <Input
+              placeholder="0xx xxx xxx"
+              value={textDraft.phone}
+              onChange={(e) => sync({ phone: e.target.value })}
+            />
+          </Field>
+        </Grid>
+      </SectionCard>
+
+      {/* ── Role ───────────────────────────────────────────── */}
+      <SectionCard title="តួនាទី">
+        {errors.role && <p className="mb-2 text-xs text-red-600">{errors.role}</p>}
+        <Grid cols={2}>
+          <Field label="តួនាទី (អ្នកដឹកនាំ)" error={errors.leaderRole}>
+            <NativeSelect
+              value={isLeader ? textDraft.leaderRole : ''}
+              disabled={isAthlete}
+              onChange={(v) => (v ? handleLeaderRoleChange(v) : handleClearRole())}
+              options={LEADER_ROLE_OPTIONS}
+              placeholder="ជ្រើសតួនាទី"
+            />
+          </Field>
+          <div className="self-end">
+            <label
+              className={[
+                'flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5 transition-colors',
+                isAthlete
+                  ? 'border-indigo-400 bg-indigo-50'
+                  : 'border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50',
+              ].join(' ')}
+            >
+              <input
+                type="radio"
+                name="roleAthlete"
+                checked={isAthlete}
+                className="h-4 w-4 accent-indigo-600"
+                onChange={() => (isAthlete ? handleClearRole() : handleAthleteSelect())}
+              />
+              <div>
+                <p className="text-sm font-medium text-slate-800">ជាកីឡាករ / កីឡាការិនី</p>
+                <p className="text-xs text-slate-500">
+                  {textDraft.gender
+                    ? `ប្រភេទ: ${textDraft.gender === 'Male' ? 'ប្រុស' : 'ស្រី'}`
+                    : 'ត្រូវគ្នានឹងភេទ'}
+                </p>
+              </div>
+            </label>
+          </div>
+        </Grid>
+      </SectionCard>
+
+      {/* ── Documents & Photo ──────────────────────────────── */}
+      <SectionCard title="ឯកសារ និង រូបថត">
+        {!photosLoaded ? (
+          <div className="grid grid-cols-2 gap-5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-30 animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-5">
+            <div className="flex shrink-0 flex-col items-center gap-1.5">
+              <p className="text-xs font-semibold text-slate-600">
+                រូបថត ៤×៦ <span className="text-red-500">*</span>
+              </p>
+              <PortraitUpload
+                file={photos.photoUpload}
+                slotId={getSlotId('photoUpload')}
+                onFile={(f) => handlePhoto('photoUpload', f)}
+                error={errors.photoUpload}
+              />
+            </div>
+
+            {(() => {
+              const selectedKeys = textDraft.nationality ? textDraft.nationality.split(',') : [];
+              const selectedDocs = VERIFY_DOCS.filter((d) => selectedKeys.includes(d.key));
+              if (selectedDocs.length === 0)
+                return (
+                  <div className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-6">
+                    <p className="text-center text-sm text-slate-400">
+                      សូមគូសជ្រើសរើសឯកសារខាងលើជាមុនសិន
+                    </p>
+                  </div>
+                );
+              return (
+                <div className="flex-1">
+                  <p className="mb-2 text-xs font-semibold text-slate-600">
+                    ឯកសារផ្ទៀងផ្ទាត់{' '}
+                    <span className="font-normal text-slate-400">
+                      ({selectedDocs.length} ឯកសារ)
+                    </span>
+                  </p>
+                  <div
+                    className={`grid gap-3 ${selectedDocs.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
+                  >
+                    {selectedDocs.map((doc) => (
+                      <DocUploadSlot
+                        key={doc.key}
+                        label={doc.label}
+                        labelEn={doc.labelEn}
+                        Icon={doc.Icon}
+                        slotId={getSlotId(doc.key)}
+                        file={photos[doc.key]}
+                        onFile={(f) => handlePhoto(doc.key, f)}
+                        error={errors[doc.key]}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ── Footer ─────────────────────────────────────────── */}
       <div className="sticky bottom-4 z-10">
         <SectionCard className="backdrop-blur-sm">
           <ActionFooter
             showBack={false}
             onNext={onNext}
             nextLabel="បន្តទៅការពិនិត្យ"
-            nextDisabled={!formData.fullNameKhmer && !formData.fullNameEnglish}
+            nextDisabled={!canProceed}
           />
         </SectionCard>
       </div>
     </div>
-  );
-}
-
-// ─── Section: Name ────────────────────────────────────────────
-
-function NameSection({
-  formData,
-  setFields,
-  errors,
-}: Pick<StepProps, 'formData' | 'setFields' | 'errors'>) {
-  return (
-    <SectionCard title="ឈ្មោះ">
-      <Grid cols={2}>
-        <Field label="ឈ្មោះ (ខ្មែរ)" error={errors.fullNameKhmer}>
-          <Input
-            placeholder="ឈ្មោះពេញ"
-            value={formData.fullNameKhmer}
-            onChange={(e) => setFields({ fullNameKhmer: e.target.value })}
-          />
-        </Field>
-        <Field label="ឈ្មោះ (ឡាតាំង)">
-          <Input
-            placeholder="Full name"
-            value={formData.fullNameEnglish}
-            onChange={(e) => setFields({ fullNameEnglish: e.target.value })}
-          />
-        </Field>
-      </Grid>
-    </SectionCard>
-  );
-}
-
-// ─── Section: Identity ────────────────────────────────────────
-
-function IdentitySection({
-  formData,
-  setFields,
-  errors,
-}: Pick<StepProps, 'formData' | 'setFields' | 'errors'>) {
-  return (
-    <SectionCard title="អត្តសញ្ញាណ">
-      <Grid cols={2}>
-        <Field label="ភេទ" error={errors.gender}>
-          <NativeSelect
-            value={formData.gender}
-            onChange={(v) => setFields({ gender: v as Gender, athleteCategory: v as Gender })}
-            options={GENDER_OPTIONS}
-            placeholder="ជ្រើសភេទ"
-          />
-        </Field>
-        <Field label="ជាតិសញ្ជាតិ">
-          <NativeSelect
-            value={formData.nationality}
-            onChange={(v) => setFields({ nationality: v })}
-            options={[...NATIONALITY_OPTIONS]}
-            placeholder="ជ្រើស"
-          />
-        </Field>
-      </Grid>
-    </SectionCard>
-  );
-}
-
-// ─── Section: Contact & DOB ───────────────────────────────────
-
-function ContactSection({
-  formData,
-  setFields,
-  errors,
-}: Pick<StepProps, 'formData' | 'setFields' | 'errors'>) {
-  return (
-    <SectionCard title="កំណើត និង ទំនាក់ទំនង">
-      <Grid cols={3}>
-        <Field label="ថ្ងៃកំណើត" error={errors.dateOfBirth}>
-          <Input
-            type="date"
-            value={formData.dateOfBirth}
-            onChange={(e) => setFields({ dateOfBirth: e.target.value })}
-          />
-        </Field>
-        <Field label="លេខអត្តសញ្ញាណ" error={errors.nationalID}>
-          <Input
-            placeholder="xxxxxxxxxxxxxx"
-            value={formData.nationalID}
-            onChange={(e) => setFields({ nationalID: e.target.value })}
-          />
-        </Field>
-        <Field label="ទូរស័ព្ទ" error={errors.phone}>
-          <Input
-            placeholder="0xx xxx xxx"
-            value={formData.phone}
-            onChange={(e) => setFields({ phone: e.target.value })}
-          />
-        </Field>
-      </Grid>
-    </SectionCard>
-  );
-}
-
-// ─── Section: Role ────────────────────────────────────────────
-
-interface RoleSectionProps extends Pick<StepProps, 'formData' | 'setFields' | 'errors'> {
-  isAthlete: boolean;
-}
-
-function RoleSection({ formData, setFields, errors, isAthlete }: RoleSectionProps) {
-  const handleLeaderRoleChange = (value: string) => {
-    setFields({ role: 'Leader', leaderRole: value as LeaderRole, athleteCategory: '' });
-  };
-
-  const handleAthleteToggle = (checked: boolean) => {
-    if (checked) {
-      setFields({
-        role: 'Athlete',
-        leaderRole: '',
-        // AthleteCategory is 'Male' | 'Female' — same values as Gender
-        athleteCategory: formData.gender as AthleteCategory,
-      });
-    } else {
-      setFields({ role: '', athleteCategory: '' });
-    }
-  };
-
-  return (
-    <SectionCard title="តួនាទី">
-      <Grid cols={2}>
-        <Field label="តួនាទី (អ្នកដឹកនាំ)">
-          <NativeSelect
-            value={formData.role === 'Leader' ? formData.leaderRole : ''}
-            disabled={isAthlete}
-            onChange={handleLeaderRoleChange}
-            options={LEADER_ROLE_OPTIONS}
-            placeholder="ជ្រើសតួនាទី"
-          />
-        </Field>
-
-        <label className="flex h-10 cursor-pointer items-center gap-3 self-end rounded-xl border border-slate-200 bg-slate-50 px-4">
-          <input
-            type="checkbox"
-            checked={isAthlete}
-            className="h-4 w-4 rounded accent-indigo-600"
-            onChange={(e) => handleAthleteToggle(e.target.checked)}
-          />
-          <div>
-            <p className="text-sm font-medium text-slate-800">ជាកីឡាករ / កីឡាការិនី</p>
-            <p className="text-xs text-slate-500">ត្រូវគ្នានឹងភេទ</p>
-          </div>
-        </label>
-      </Grid>
-
-      {errors.role && <p className="mt-1 text-xs text-red-600">{errors.role}</p>}
-    </SectionCard>
-  );
-}
-
-// ─── Section: Documents ───────────────────────────────────────
-
-function DocumentsSection({
-  formData,
-  setFields,
-  errors,
-}: Pick<StepProps, 'formData' | 'setFields' | 'errors'>) {
-  return (
-    <SectionCard title="ឯកសារ">
-      <Grid cols={2} gap={6}>
-        <Field error={errors.photoUpload}>
-          <PhotoUpload
-            file={formData.photoUpload}
-            onChange={(f) => setFields({ photoUpload: f })}
-          />
-        </Field>
-        <Field error={errors.nationalityDocumentUpload}>
-          <NationalityDocumentUpload
-            file={formData.nationalityDocumentUpload}
-            onChange={(f) => setFields({ nationalityDocumentUpload: f })}
-          />
-        </Field>
-      </Grid>
-    </SectionCard>
   );
 }

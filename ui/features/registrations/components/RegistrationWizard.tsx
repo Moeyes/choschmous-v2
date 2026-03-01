@@ -17,6 +17,7 @@ import { useStepWizard } from '@/ui/components/navigation/useStepWizard';
 import { RegistrationSidebar } from './RegistrationSidebar';
 import { useRegistration, validateStep } from '../hooks/useRegistration';
 import type { RegistrationErrors, RegistrationFormData } from '../hooks/useRegistration';
+import { PhotoStorage } from '../hooks/photoStorage';
 import {
   EventStep,
   OrganizationStep,
@@ -27,6 +28,7 @@ import {
   CompletedStep,
 } from '@/ui/features/registrations/components/steps';
 import { ROUTES } from '@/config/routes';
+27;
 
 interface Event {
   id: string;
@@ -79,6 +81,19 @@ export function RegistrationWizard({
   const { formData, setFields, resetPersonal } = useRegistration();
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [enrollId, setEnrollId] = useState<number | null>(null);
+
+  // Clear all persisted draft data on page load so a refresh starts fresh
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // Clear localStorage draft keys
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('reg_personal_draft__')) {
+        localStorage.removeItem(key);
+      }
+    });
+    // Clear IndexedDB photo storage
+    PhotoStorage.clear();
+  }, []);
 
   const currentEvent = events.filter(Boolean).find((e) => e && e.id === formData.eventId);
 
