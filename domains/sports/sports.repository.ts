@@ -5,7 +5,10 @@
 
 import type { Sport, SportEventOrg, SportFilters } from './sports.types';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const BACKEND_URL = (process.env.BACKEND_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(
+  /\/+$/,
+  ''
+);
 const API = `${BACKEND_URL}/api`;
 
 export const sportsRepository = {
@@ -17,31 +20,55 @@ export const sportsRepository = {
     if (!res.ok) throw new Error('Failed to fetch sports');
 
     const json = await res.json();
-    return (json.data ?? []).map((s: any) => ({ id: s.id, name: s.name_kh ?? s.name ?? "", createdAt: s.created_at }));
+    return (json.data ?? []).map((s: any) => ({
+      id: s.id,
+      name: s.name_kh ?? '',
+      sportType: s.sport_type ?? null,
+      createdAt: s.created_at ?? '',
+    }));
   },
 
   async findById(id: number): Promise<Sport | null> {
     const res = await fetch(`${API}/sports/${id}`);
     if (!res.ok) return null;
-    return res.json();
+    const s = await res.json();
+    return {
+      id: s.id,
+      name: s.name_kh ?? '',
+      sportType: s.sport_type ?? null,
+      createdAt: s.created_at ?? '',
+    };
   },
 
   async findByEventId(eventId: number): Promise<Sport[]> {
-    // Backend: GET /org-sports/links?skip=0&limit=100 then filter by events_id
-    // Or fetch all sports and filter — adjust if backend adds query param support
-    const res = await fetch(`${API}/org-sports/links?skip=0&limit=100`);
-    if (!res.ok) throw new Error('Failed to fetch sports by event');
-    const json = await res.json();
-    const links: SportEventOrg[] = json.data.filter(
-      (l: any) => l.events_id === eventId
+    // Fetch links + all sports in parallel (2 requests, no N+1)
+    const [linksRes, sportsRes] = await Promise.all([
+      fetch(`${API}/org-sports/links?skip=0&limit=500`),
+      fetch(`${API}/sports/?skip=0&limit=500`),
+    ]);
+    if (!linksRes.ok) throw new Error('Failed to fetch sports by event');
+    const linksJson = await linksRes.json();
+    const matchingIds = new Set(
+      (linksJson.data ?? [])
+        .filter((l: any) => l.events_id === eventId)
+        .map((l: any) => l.sports_id)
     );
-    // Fetch each unique sport
-    const sportIds = [...new Set(links.map((l: any) => l.sports_id))];
-    const sports = await Promise.all(sportIds.map((id) => this.findById(id as number)));
-    return sports.filter(Boolean) as Sport[];
+    if (matchingIds.size === 0) return [];
+    // Map from bulk sport list — no individual fetches
+    const allSports = sportsRes.ok ? ((await sportsRes.json()).data ?? []) : [];
+    return allSports
+      .filter((s: any) => matchingIds.has(s.id))
+      .map(
+        (s: any): Sport => ({
+          id: s.id,
+          name: s.name_kh ?? '',
+          sportType: s.sport_type ?? null,
+          createdAt: s.created_at ?? '',
+        })
+      );
   },
 
-  async create(data: { name: string }): Promise<Sport> {
+  async create(data: { name_kh: string; sport_type: string }): Promise<Sport> {
     const res = await fetch(`${API}/sports`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -51,12 +78,18 @@ export const sportsRepository = {
       const err = await res.json().catch(() => ({ detail: 'Failed to create sport' }));
       throw new Error(err.detail ?? 'Failed to create sport');
     }
-    return res.json();
+    const s = await res.json();
+    return {
+      id: s.id,
+      name: s.name_kh ?? '',
+      sportType: s.sport_type ?? null,
+      createdAt: s.created_at ?? '',
+    };
   },
 
-  async update(id: number, data: { name: string }): Promise<Sport> {
+  async update(id: number, data: { name_kh?: string; sport_type?: string }): Promise<Sport> {
     const res = await fetch(`${API}/sports/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
@@ -64,7 +97,13 @@ export const sportsRepository = {
       const err = await res.json().catch(() => ({ detail: 'Failed to update sport' }));
       throw new Error(err.detail ?? 'Failed to update sport');
     }
-    return res.json();
+    const s = await res.json();
+    return {
+      id: s.id,
+      name: s.name_kh ?? '',
+      sportType: s.sport_type ?? null,
+      createdAt: s.created_at ?? '',
+    };
   },
 
   async delete(id: number): Promise<void> {
@@ -106,7 +145,7 @@ export const sportsRepository = {
       eventsId: result.events_id,
       sportsId: result.sports_id,
       organizationId: result.organization_id,
-      createdAt: result.createdAt,
+      createdAt: result.created_at ?? '',
     };
   },
 

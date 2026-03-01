@@ -4,13 +4,19 @@
 import { NextRequest } from 'next/server';
 import { ok, handleError } from '@/lib/api/response';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const BACKEND_URL = (process.env.BACKEND_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(
+  /\/$/,
+  ''
+);
 const API = `${BACKEND_URL}/api`;
 
 function mapCategory(c: any) {
   return {
     id: c.id,
     name: c.category ?? '',
+    sportsId: c.sports_id ?? null,
+    eventsId: c.events_id ?? null,
+    createdAt: c.created_at ?? '',
   };
 }
 

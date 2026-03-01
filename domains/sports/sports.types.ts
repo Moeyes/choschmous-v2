@@ -1,13 +1,14 @@
 // ============================================================
 // domains/sports/sports.types.ts
-// Derived from: Sports + Sports_event_org + categories tables
+// Matches backend: Sports table + SportPublic schema
 // ============================================================
 
-/** Maps to: Sports table */
+/** Maps to: Sports table (id, name_kh, sport_type, created_at) */
 export interface Sport {
   id: number;
-  name: string;
-  createdAt: Date;
+  name: string; // mapped from name_kh
+  sportType: string | null; // mapped from sport_type
+  createdAt: string;
 }
 
 /**
@@ -16,32 +17,37 @@ export interface Sport {
  */
 export interface SportEventOrg {
   id: number;
-  eventsId: number;       // FK → Events.id
-  sportsId: number;       // FK → Sports.id
+  eventsId: number; // FK → Events.id
+  sportsId: number; // FK → Sports.id
   organizationId: number; // FK → Organization.id
-  createdAt: Date;
+  createdAt: string;
 }
 
 // ── DTOs ──────────────────────────────────────────────────────
 
+/** Backend SportCreate: { name_kh, sport_type } */
 export interface CreateSportInput {
-  name: string;
+  name_kh: string;
+  sport_type: string;
 }
 
+/** Backend SportUpdate: { name_kh?, sport_type? } */
 export interface UpdateSportInput {
   id: number;
-  name: string;
+  name_kh?: string;
+  sport_type?: string;
 }
 
 /** Sport enriched with participation counts for dashboard display */
 export interface SportSummary {
   id: number;
   name: string;
+  sportType: string | null;
   totalAthletes: number;
   totalLeaders: number;
   totalParticipants: number;
   categories: string[];
-  createdAt: Date;
+  createdAt: string;
 }
 
 // ── Filters ───────────────────────────────────────────────────

@@ -1,29 +1,28 @@
 'use client';
 // ============================================================
 // ui/hooks/useOrganizationLoans.ts
-// Matches useUserSession pattern — AbortController + useEffect
+// Fetches organizations list for selection
 // ============================================================
 
 import { useEffect, useState } from 'react';
-import type { Organization, Loan } from '@/domains/organizations/organizations.types';
+import type { Organization } from '@/domains/organizations/organizations.types';
 import { organizationsRepository } from '@/domains/organizations/organizations.repository';
 
-interface UseOrganizationLoansReturn {
+interface UseOrganizationsReturn {
   organizations: Organization[];
-  loans: Loan[];
-  selectedOrgId: string | null;
-  setSelectedOrgId: (id: string | null) => void;
+  selectedOrgId: number | null;
+  setSelectedOrgId: (id: number | null) => void;
   isLoadingOrgs: boolean;
-  isLoadingLoans: boolean;
   error: string | null;
 }
 
-export function useOrganizationLoans(): UseOrganizationLoansReturn {
+/** @deprecated Rename: prefer `useOrganizations` */
+export const useOrganizationLoans = useOrganizations;
+
+export function useOrganizations(): UseOrganizationsReturn {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
-  const [isLoadingLoans, setIsLoadingLoans] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load organizations on mount
@@ -47,41 +46,11 @@ export function useOrganizationLoans(): UseOrganizationLoansReturn {
     return () => controller.abort();
   }, []);
 
-  // Load loans when org is selected
-  useEffect(() => {
-    if (!selectedOrgId) {
-      setLoans([]);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function loadLoans() {
-      setIsLoadingLoans(true);
-      setError(null);
-      try {
-        const data = await organizationsRepository.findLoansByOrganization(selectedOrgId!);
-        setLoans(data);
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          setError((err as Error).message ?? 'Failed to load loans');
-        }
-      } finally {
-        setIsLoadingLoans(false);
-      }
-    }
-
-    loadLoans();
-    return () => controller.abort();
-  }, [selectedOrgId]);
-
   return {
     organizations,
-    loans,
     selectedOrgId,
     setSelectedOrgId,
     isLoadingOrgs,
-    isLoadingLoans,
     error,
   };
 }

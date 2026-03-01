@@ -129,20 +129,23 @@ export const registrationsRepository = {
     }
 
     const result = await res.json();
-    console.log('[createEnroll] response →', JSON.stringify(result, null, 2));
 
     return {
       id: result.id,
       uuid: result.user_id ?? null, // uuid col — may be null for public registrations
+      khFamilyName: result.kh_family_name ?? '',
+      khGivenName: result.kh_given_name ?? '',
+      enFamilyName: result.en_family_name ?? '',
+      enGivenName: result.en_given_name ?? '',
+      phonenumber: result.phonenumber ?? '',
       gender: result.gender as Gender,
-      name: `${result.en_given_name} ${result.en_family_name}`.trim(),
       nationality: result.nationality,
       dob: new Date(result.date_of_birth),
       idDocType: result.id_document_type as IdDocType,
       address: result.address,
       photoPath: result.photo_path,
       documentsPath: result.documents_path,
-      userID: 0,
+      userId: result.user_id ?? null,
       createdAt: new Date(result.created_at),
     };
   },
@@ -153,15 +156,19 @@ export const registrationsRepository = {
     const result = await res.json();
     return {
       id: result.id,
+      khFamilyName: result.kh_family_name ?? '',
+      khGivenName: result.kh_given_name ?? '',
+      enFamilyName: result.en_family_name ?? '',
+      enGivenName: result.en_given_name ?? '',
+      phonenumber: result.phonenumber ?? '',
       gender: result.gender as Gender,
-      name: `${result.en_given_name} ${result.en_family_name}`.trim(),
       nationality: result.nationality,
       dob: new Date(result.date_of_birth),
       idDocType: result.id_document_type as IdDocType,
       address: result.address,
       photoPath: result.photo_path,
       documentsPath: result.documents_path,
-      userID: 0,
+      userId: result.user_id ?? null,
       createdAt: new Date(result.created_at),
     };
   },
@@ -188,8 +195,8 @@ export const registrationsRepository = {
       sports_id: data.sportsID,
       organization_id: data.organizationID,
     };
-    if (data.categoriesID && data.categoriesID !== 0) {
-      body.category_id = data.categoriesID;
+    if (data.categoryID && data.categoryID !== 0) {
+      body.category_id = data.categoryID;
     }
     const res = await fetch(`${API}/athlete-participation/`, {
       method: 'POST',
@@ -205,11 +212,7 @@ export const registrationsRepository = {
     return res.json();
   },
 
-  async createLeader(data: {
-    enroll_id: number;
-    roles: string;
-    phoneNumber?: string | null;
-  }): Promise<Leader> {
+  async createLeader(data: { enroll_id: number; roles: string }): Promise<Leader> {
     const mappedRole = mapLeaderRole(data.roles);
     const res = await fetch(`${API}/leaders/`, {
       method: 'POST',
@@ -278,14 +281,13 @@ export const registrationsRepository = {
         nationality: item.nationality,
         dob: item.date_of_birth,
         idDocType: item.id_document_type as IdDocType,
+        phonenumber: item.phonenumber ?? null,
         photoPath: item.photo_path,
         documentsPath: item.documents_path,
         role: 'Athlete',
         status: 'pending',
-        athleteClass: null,
         athleteCategory: null,
         leaderRole: null,
-        phoneNumber: item.phonenumber ?? null,
         eventId: null,
         sportId: null,
         categoryId: null,

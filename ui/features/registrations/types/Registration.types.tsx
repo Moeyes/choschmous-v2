@@ -121,7 +121,7 @@ export interface StepProps {
   formData: RegistrationFormData;
   setFields: (fields: Partial<RegistrationFormData>) => void;
   errors: RegistrationErrors;
-  onNext: () => void;
+  onNext: (overrideFields?: Partial<RegistrationFormData>) => void;
   clearErrors?: (fieldKeys: (keyof RegistrationFormData)[]) => void;
 }
 
@@ -132,7 +132,7 @@ export function buildFullNameKhmer(first: string, last: string): string {
 }
 
 export function buildFullNameLatin(first: string, last: string): string {
-  return [last, first].filter(Boolean).join(' ');
+  return [first, last].filter(Boolean).join(' ');
 }
 
 // ── Display label maps ────────────────────────────────────────
@@ -140,6 +140,7 @@ export function buildFullNameLatin(first: string, last: string): string {
 export const GENDER_LABELS: Record<Gender, string> = {
   Male: 'ប្រុស',
   Female: 'ស្រី',
+  Other: 'ផ្សេងៗ',
 };
 
 export const ROLE_LABELS: Record<LeaderRole | 'Athlete', string> = {
@@ -152,7 +153,7 @@ export const ROLE_LABELS: Record<LeaderRole | 'Athlete', string> = {
   teacher_assistant: 'ជំនួយការ',
 };
 
-export const ID_DOC_LABELS: Record<IdDocType | 'Passport', string> = {
+export const ID_DOC_LABELS: Record<IdDocType, string> = {
   IDCard: 'អត្តសញ្ញាណប័ណ្ណ',
   BirthCertificate: 'សំបុត្រកំណើត',
   Passport: 'លិខិតឆ្លងដែន',
@@ -165,6 +166,7 @@ export const ID_DOC_LABELS: Record<IdDocType | 'Passport', string> = {
 export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: 'Male', label: GENDER_LABELS.Male },
   { value: 'Female', label: GENDER_LABELS.Female },
+  { value: 'Other', label: GENDER_LABELS.Other },
 ];
 
 export const NATIONALITY_OPTIONS = [

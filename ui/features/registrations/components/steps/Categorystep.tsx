@@ -51,7 +51,7 @@ export function CategoryStep({ formData, setFields, errors, onNext }: StepProps)
   const handleSelect = (category: CategoryItem) => {
     const fields = { categoryId: String(category.id), categoryName: category.name };
     setFields(fields);
-    (onNext as any)(fields);
+    onNext(fields);
   };
 
   return (

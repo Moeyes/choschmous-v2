@@ -51,7 +51,7 @@ export function OrganizationStep({ formData, setFields, errors, onNext }: StepPr
         | 'ministry',
     };
     setFields(fields);
-    (onNext as any)(fields);
+    onNext(fields);
   };
 
   return (
@@ -101,7 +101,7 @@ function OrgCard({ org, isSelected, onSelect }: OrgCardProps) {
     <button
       type="button"
       onClick={() => onSelect(org)}
-      className={`event-card group${isSelected ? 'selected' : ''}`}
+      className={`event-card group ${isSelected ? 'selected' : ''}`}
     >
       {isSelected && (
         <div className="event-card-check">
@@ -126,7 +126,7 @@ function OrgCard({ org, isSelected, onSelect }: OrgCardProps) {
         </div>
         <div>
           <h3
-            className={`event-card-title${isSelected ? 'selected' : ''}`}
+            className={`event-card-title ${isSelected ? 'selected' : ''}`}
             style={{ marginBottom: 0 }}
           >
             {org.name}

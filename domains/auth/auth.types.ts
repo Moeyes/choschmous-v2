@@ -5,37 +5,40 @@
 
 import { Role } from '@/config/roles';
 
-// Matches backend UserRole enum
-export type UserLevel = 0 | 1 | 2; // 0 = guest, 1 = admin, 2 = superadmin
+// Backend UserRole enum values (from enumdata.py)
+export type BackendRole = 'admin' | 'user1' | 'user2' | 'guest';
 
 export type UserRole = 'superadmin' | 'admin' | 'public';
 
-// Matches backend User table exactly (uuid PK, kh/en names, username, email, user_level)
+// Matches backend UserPublic schema (user.py)
 export interface BackendUser {
-  id: string;              // UUID
+  id: string; // UUID
   kh_family_name: string;
   kh_given_name: string;
   en_family_name: string;
   en_given_name: string;
   email: string;
   username: string;
-  user_level: UserLevel;
+  role: BackendRole;
   photo_path: string | null;
+  full_name: string | null;
+  is_active: boolean;
+  is_superuser: boolean;
   created_at: string;
 }
 
-/** Safe user shape returned from backend — no password */
+/** Safe user shape for frontend use — no password */
 export interface SafeUser {
   id: string;
   username: string;
   email: string;
-  user_level: UserLevel;
-  role: UserRole;
+  role: BackendRole;
   kh_family_name: string;
   kh_given_name: string;
   en_family_name: string;
   en_given_name: string;
   photo_path: string | null;
+  is_superuser: boolean;
 }
 
 export interface Session {
@@ -47,11 +50,11 @@ export interface LoginInput {
   password: string;
 }
 
-// What the backend POST /login returns
+// What the backend POST /api/auth/login returns
 export interface BackendLoginResponse {
-  success: boolean;
-  user: SafeUser;
-  token?: string;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
 }
 
 // What the frontend session stores / passes around
@@ -61,16 +64,16 @@ export interface AuthUser {
   username: string;
   role: Role;
   name: string;
-  user_level: UserLevel;
 }
 
-export function userLevelToRole(level: UserLevel): UserRole {
-  if (level === 2) return 'superadmin';
-  if (level === 1) return 'admin';
-  return 'public';
-}
-
-export function userLevelToFrontendRole(level: UserLevel): Role {
-  if (level === 2) return Role.SUPERADMIN;
+export function backendRoleToFrontendRole(role: BackendRole, isSuperuser: boolean): Role {
+  if (isSuperuser) return Role.SUPERADMIN;
+  if (role === 'admin') return Role.SUPERADMIN;
   return Role.ADMIN;
+}
+
+export function backendRoleToDisplayRole(role: BackendRole): UserRole {
+  if (role === 'admin') return 'superadmin';
+  if (role === 'user1' || role === 'user2') return 'admin';
+  return 'public';
 }

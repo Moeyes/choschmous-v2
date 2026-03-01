@@ -5,7 +5,7 @@
 // ── Enums / Literals ──────────────────────────────────────────
 
 export type RegistrationStatus = 'pending' | 'approved' | 'rejected';
-export type Gender = 'Male' | 'Female';
+export type Gender = 'Male' | 'Female' | 'Other';
 export type IdDocType = 'IDCard' | 'BirthCertificate' | 'Passport' | 'FamilyBook' | 'Other';
 export type PositionRole = 'Athlete' | 'Leader' | 'Technical';
 export type AthleteCategory = 'Male' | 'Female';
@@ -19,10 +19,14 @@ export type LeaderRole =
 
 // ── Core DB Tables ────────────────────────────────────────────
 
+/** Maps to: enrollments table */
 export interface Enroll {
   id: number;
-  userID: number;
-  name: string;
+  khFamilyName: string;
+  khGivenName: string;
+  enFamilyName: string;
+  enGivenName: string;
+  phonenumber: string;
   gender: Gender;
   nationality: string;
   dob: Date;
@@ -30,32 +34,32 @@ export interface Enroll {
   address: string | null;
   photoPath: string | null;
   documentsPath: string | null;
+  userId: string | null; // UUID FK → users.id
   createdAt: Date;
 }
 
+/** Maps to: athletes table (id, enroll_id, created_at) */
 export interface Athlete {
   id: number;
   enrollID: number;
-  class: string | null;
-  uniformSize: string | null;
   createdAt: Date;
 }
 
+/** Maps to: leaders table (id, LeaderRole, enroll_id, created_at) */
 export interface Leader {
   id: number;
   enrollID: number;
-  roles: LeaderRole;
-  phoneNumber: string;
+  leaderRole: string | null; // LeaderRole enum (currently empty in backend)
   createdAt: Date;
 }
 
 export interface AthleteParticipation {
   id: number;
-  athletesID: number;
-  eventsID: number;
-  categoriesID: number;
-  sportsID: number;
-  organizationID: number;
+  athletesID: number; // FK → athletes.id
+  eventsID: number; // FK → events.id
+  sportsID: number; // FK → sports.id
+  categoryID: number | null; // FK → categories.id (nullable)
+  organizationID: number; // FK → organizations.id
   createdAt: Date;
 }
 
@@ -77,14 +81,13 @@ export interface Registration {
   nationality: string;
   dob: Date;
   idDocType: IdDocType;
+  phonenumber: string | null;
   photoPath: string | null;
   documentsPath: string | null;
   role: PositionRole;
   status: RegistrationStatus;
-  athleteClass: string | null;
   athleteCategory: AthleteCategory | null;
   leaderRole: LeaderRole | null;
-  phoneNumber: string | null;
   eventId: number | null;
   sportId: number | null;
   categoryId: number | null;

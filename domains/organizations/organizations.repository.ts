@@ -1,33 +1,30 @@
 // ============================================================
 // domains/organizations/organizations.repository.ts
-// Calls FastAPI backend — matches events.repository.ts pattern
+// Matches backend: OrganizationPublic schema
 // ============================================================
 
-import type { Organization, Loan, OrganizationFilters } from './organizations.types';
+import type { Organization, OrganizationFilters } from './organizations.types';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const BACKEND_URL = (process.env.BACKEND_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(
+  /\/+$/,
+  ''
+);
 const API = `${BACKEND_URL}/api`;
 
 function mapOrganization(o: any): Organization {
   return {
-    id: String(o.id),
-    name: o.name ?? '',
-    createdAt: o.created_at,
-  };
-}
-
-function mapLoan(l: any): Loan {
-  return {
-    id: String(l.id),
-    organizationId: String(l.organization_id),
-    amount: l.amount ?? 0,
-    status: l.status ?? '',
-    createdAt: l.created_at,
+    id: o.id,
+    name: o.name_kh ?? '',
+    type: o.type ?? 'province',
+    code: o.code ?? null,
+    createdAt: o.created_at ?? '',
   };
 }
 
 export const organizationsRepository = {
-  async findMany(filters: OrganizationFilters = {}): Promise<{ data: Organization[]; total: number }> {
+  async findMany(
+    filters: OrganizationFilters = {}
+  ): Promise<{ data: Organization[]; total: number }> {
     const { page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
@@ -39,25 +36,15 @@ export const organizationsRepository = {
 
     const json = await res.json();
     return {
-      data: (json.data ?? json ?? []).map(mapOrganization),
+      data: (json.data ?? []).map(mapOrganization),
       total: json.count ?? 0,
     };
   },
 
-  async findById(id: string): Promise<Organization | null> {
+  async findById(id: number): Promise<Organization | null> {
     const res = await fetch(`${API}/organizations/${id}`);
     if (!res.ok) return null;
     const o = await res.json();
     return mapOrganization(o);
-  },
-
-  async findLoansByOrganization(orgId: string): Promise<Loan[]> {
-    const res = await fetch(`${API}/organizations/${orgId}/loans`);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Failed to fetch loans' }));
-      throw new Error(err.detail ?? `Backend ${res.status}: failed to fetch loans`);
-    }
-    const json = await res.json();
-    return (json.data ?? json ?? []).map(mapLoan);
   },
 };

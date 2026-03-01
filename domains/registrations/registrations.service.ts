@@ -28,11 +28,17 @@ export const registrationsService = {
     const enroll = await registrationsRepository.createEnroll({
       // Split name fields map directly to DB columns — no join/split needed
       khGivenName:
-        (parsed as any).firstNameKhmer || (parsed as any).fullNameKhmer?.split(' ').slice(1).join(' ') || '',
-      khFamilyName: (parsed as any).lastNameKhmer || (parsed as any).fullNameKhmer?.split(' ')[0] || '',
-      enGivenName: (parsed as any).firstNameLatin || (parsed as any).fullNameEnglish?.split(' ')[0] || '',
+        (parsed as any).firstNameKhmer ||
+        (parsed as any).fullNameKhmer?.split(' ').slice(1).join(' ') ||
+        '',
+      khFamilyName:
+        (parsed as any).lastNameKhmer || (parsed as any).fullNameKhmer?.split(' ')[0] || '',
+      enGivenName:
+        (parsed as any).firstNameLatin || (parsed as any).fullNameEnglish?.split(' ')[0] || '',
       enFamilyName:
-        (parsed as any).lastNameLatin || (parsed as any).fullNameEnglish?.split(' ').slice(1).join(' ') || '',
+        (parsed as any).lastNameLatin ||
+        (parsed as any).fullNameEnglish?.split(' ').slice(1).join(' ') ||
+        '',
 
       gender: parsed.gender,
       nationality: parsed.nationality || 'Cambodian', // real nationality string
@@ -55,7 +61,7 @@ export const registrationsService = {
       await registrationsRepository.createAthleteParticipation({
         athletesID: athlete.id,
         eventsID: parsed.eventId,
-        categoriesID: parsed.categoryId ?? 0,
+        categoryID: parsed.categoryId ?? null,
         sportsID: parsed.sportId,
         organizationID: parsed.organizationId,
       });
@@ -63,7 +69,6 @@ export const registrationsService = {
       const leader = await registrationsRepository.createLeader({
         enroll_id: enroll.id,
         roles: (parsed as any).leaderRole ?? 'delegate',
-        phoneNumber: parsed.phone,
       });
       await registrationsRepository.createLeaderParticipation({
         leadersID: leader.id,

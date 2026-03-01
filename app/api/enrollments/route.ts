@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND}/api/v1/enrollments/`);
+    const res = await fetch(`${BACKEND}/api/enrollments/`);
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (err) {

@@ -1,26 +1,29 @@
-// Example mock province object for testing and wizard integration
-export const mockProvince = {
-  id: 1,
-  name: 'Phnom Penh',
-  code: 'PP',
-  region: 'Central',
-  population: 2200000,
-};
+// ============================================================
+// domains/provinces/provinces.types.ts
+// "Provinces" are really Organizations with type='province'
+// Matches backend OrganizationPublic schema
+// ============================================================
+
 export interface Province {
   id: number;
-  name: string;
-  khmerName?: string | null;
-  createdAt: Date;
+  name: string; // mapped from name_kh
+  type: string; // instituteType ('province' | 'ministry')
+  code: string | null;
+  createdAt: string;
 }
 
+/** Backend OrganizationCreate: { name_kh, type, code? } */
 export interface CreateProvinceInput {
-  name: string;
-  khmerName?: string | null;
+  name_kh: string;
+  type: string; // 'province' | 'ministry'
+  code?: string | null;
 }
 
+/** Backend OrganizationUpdate: { name_kh?, type?, code? } */
 export interface UpdateProvinceInput {
-  name?: string;
-  khmerName?: string | null;
+  name_kh?: string;
+  type?: string;
+  code?: string | null;
 }
 
 export interface ProvinceFilters {

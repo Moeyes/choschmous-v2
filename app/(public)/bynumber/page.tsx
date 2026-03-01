@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { ByNumberWizard } from '@/ui/features/bynumber/components/ByNumberWizard';
 
-export default function ByNumberPage() {
+function ByNumberContent() {
   const [events, setEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
 
@@ -23,5 +23,13 @@ export default function ByNumberPage() {
     <div className="px-8 py-10">
       <ByNumberWizard events={events} eventsLoading={eventsLoading} />
     </div>
+  );
+}
+
+export default function ByNumberPage() {
+  return (
+    <Suspense fallback={<div className="px-8 py-10">Loading...</div>}>
+      <ByNumberContent />
+    </Suspense>
   );
 }

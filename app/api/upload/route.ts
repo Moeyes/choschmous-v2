@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'enrollId and uuid are required' }, { status: 400 });
     }
 
-    const subfolder = `enrollments/${uuid}`;
+    // Sanitize uuid to prevent path traversal
+    const safeUuid = String(uuid).replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!safeUuid || safeUuid !== String(uuid)) {
+      return NextResponse.json({ error: 'Invalid uuid format' }, { status: 400 });
+    }
+
+    const subfolder = `enrollments/${safeUuid}`;
     const patch: Record<string, string> = {};
 
     // ── photo_path — single portrait photo ───────────────────────────────────
@@ -62,11 +68,10 @@ export async function POST(req: NextRequest) {
       if (!patchRes.ok) {
         const err = await patchRes.json().catch(() => ({ detail: 'PATCH failed' }));
         console.error('[upload] PATCH enrollment failed:', err);
-        return NextResponse.json({
-          ok: true,
-          warning: 'Files saved but enrollment PATCH failed',
-          ...patch,
-        });
+        return NextResponse.json(
+          { error: 'Files saved but enrollment update failed', detail: err.detail, ...patch },
+          { status: 502 }
+        );
       }
     }
 

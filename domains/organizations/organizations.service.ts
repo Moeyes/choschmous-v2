@@ -1,6 +1,5 @@
 // ============================================================
 // domains/organizations/organizations.service.ts
-// Matches surveysService functional object pattern
 // ============================================================
 
 import { organizationsRepository } from './organizations.repository';
@@ -12,14 +11,9 @@ export const organizationsService = {
     return organizationsRepository.findMany(filters);
   },
 
-  async getById(id: string) {
+  async getById(id: number) {
     const org = await organizationsRepository.findById(id);
     if (!org) throw new NotFoundError('Organization');
     return org;
-  },
-
-  async getLoansByOrganization(orgId: string) {
-    await this.getById(orgId); // validate org exists first
-    return organizationsRepository.findLoansByOrganization(orgId);
   },
 };

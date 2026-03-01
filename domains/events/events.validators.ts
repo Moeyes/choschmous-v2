@@ -1,18 +1,23 @@
 // ============================================================
 // domains/events/events.validators.ts
+// Matches backend EventCreate { name_kh, type } schema
 // ============================================================
 
 import { z } from 'zod';
+import { EventType } from './events.types';
+
+const eventTypeValues = Object.values(EventType) as [string, ...string[]];
 
 export const createEventSchema = z.object({
-  name: z.string().trim().min(1, 'ត្រូវបញ្ចូលឈ្មោះព្រឹត្តិការណ៍'),
-  date: z.string().refine((val) => !isNaN(new Date(val).getTime()), 'ថ្ងៃខែឆ្នាំមិនត្រឹមត្រូវ'),
+  name_kh: z.string().trim().min(1, 'ត្រូវបញ្ចូលឈ្មោះព្រឹត្តិការណ៍'),
+  type: z.enum(eventTypeValues, {
+    message: 'ត្រូវជ្រើសរើសប្រភេទព្រឹត្តិការណ៍',
+  }),
 });
 
 export const updateEventSchema = z.object({
-  id: z.number().int().positive(),
-  name: z.string().trim().min(1).optional(),
-  date: z.string().refine((val) => !isNaN(new Date(val).getTime()), 'ថ្ងៃខែឆ្នាំមិនត្រឹមត្រូវ').optional(),
+  name_kh: z.string().trim().min(1).optional(),
+  type: z.enum(eventTypeValues).optional(),
 });
 
 export const eventFiltersSchema = z.object({

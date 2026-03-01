@@ -19,12 +19,14 @@ export class EventsService {
   }
 
   async create(input: CreateEventInput) {
-    return this.repo.create(createEventSchema.parse(input));
+    const parsed = createEventSchema.parse(input);
+    return this.repo.create(parsed as CreateEventInput);
   }
 
   async update(id: string, input: UpdateEventInput) {
     await this.getById(id);
-    return this.repo.update(id, updateEventSchema.parse(input));
+    const parsed = updateEventSchema.parse(input);
+    return this.repo.update(id, parsed as UpdateEventInput);
   }
 
   async delete(id: string) {

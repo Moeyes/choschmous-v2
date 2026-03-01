@@ -1,16 +1,19 @@
 // ============================================================
 // domains/sports/sports.validators.ts
+// Matches backend SportCreate { name_kh, sport_type }
 // ============================================================
 
 import { z } from 'zod';
 
 export const createSportSchema = z.object({
-  name: z.string().trim().min(1, 'ត្រូវបញ្ចូលឈ្មោះកីឡា'),
+  name_kh: z.string().trim().min(1, 'ត្រូវបញ្ចូលឈ្មោះកីឡា'),
+  sport_type: z.string().trim().min(1, 'ត្រូវបញ្ចូលប្រភេទកីឡា'),
 });
 
 export const updateSportSchema = z.object({
   id: z.number().int().positive(),
-  name: z.string().trim().min(1, 'ត្រូវបញ្ចូលឈ្មោះកីឡា'),
+  name_kh: z.string().trim().min(1, 'ត្រូវបញ្ចូលឈ្មោះកីឡា').optional(),
+  sport_type: z.string().trim().min(1).optional(),
 });
 
 export const sportFiltersSchema = z.object({

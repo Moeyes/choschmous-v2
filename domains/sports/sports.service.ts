@@ -1,10 +1,8 @@
-
 import { sportsRepository } from './sports.repository';
 import { createSportSchema, updateSportSchema } from './sports.validators';
 import type { Sport, SportFilters, CreateSportInput, UpdateSportInput } from './sports.types';
 
 export const sportsService = {
-
   async getAll(filters: SportFilters = {}): Promise<{ data: Sport[]; total: number }> {
     const [data, total] = await Promise.all([
       sportsRepository.findAll(filters),
@@ -25,13 +23,14 @@ export const sportsService = {
 
   async create(input: CreateSportInput): Promise<Sport> {
     const parsed = createSportSchema.parse(input);
-    return sportsRepository.create({ name: parsed.name });
+    return sportsRepository.create({ name_kh: parsed.name_kh, sport_type: parsed.sport_type });
   },
 
   async update(input: UpdateSportInput): Promise<Sport> {
     const parsed = updateSportSchema.parse(input);
     await sportsService.getById(parsed.id); // ensures it exists
-    return sportsRepository.update(parsed.id, { name: parsed.name });
+    const { id, ...data } = parsed;
+    return sportsRepository.update(id, data);
   },
 
   async remove(id: number): Promise<void> {

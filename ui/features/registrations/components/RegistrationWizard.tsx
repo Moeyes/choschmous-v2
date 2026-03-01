@@ -28,7 +28,6 @@ import {
   CompletedStep,
 } from '@/ui/features/registrations/components/steps';
 import { ROUTES } from '@/config/routes';
-27;
 
 interface Event {
   id: string;

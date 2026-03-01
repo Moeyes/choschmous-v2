@@ -4,7 +4,10 @@
 import { NextRequest } from 'next/server';
 import { ok, handleError } from '@/lib/api/response';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const BACKEND_URL = (process.env.BACKEND_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(
+  /\/$/,
+  ''
+);
 const API = `${BACKEND_URL}/api`;
 
 function mapOrg(e: any) {

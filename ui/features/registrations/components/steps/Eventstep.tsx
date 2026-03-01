@@ -48,7 +48,7 @@ export function EventStep({
   const handleSelectEvent = (event: Event) => {
     const fields = { eventId: String(event.id), eventName: event.name };
     setFields(fields);
-    (onNext as any)(fields);
+    onNext(fields);
   };
 
   return (
@@ -158,7 +158,7 @@ function EventCard({ event, isSelected, onSelect }: EventCardProps) {
     <button
       type="button"
       onClick={() => onSelect(event)}
-      className={`event-card group${isSelected ? 'selected' : ''}`}
+      className={`event-card group ${isSelected ? 'selected' : ''}`}
     >
       {isSelected && (
         <div className="event-card-check">
@@ -166,7 +166,7 @@ function EventCard({ event, isSelected, onSelect }: EventCardProps) {
         </div>
       )}
 
-      <h3 className={`event-card-title${isSelected ? 'selected' : ''}`}>{event.name}</h3>
+      <h3 className={`event-card-title ${isSelected ? 'selected' : ''}`}>{event.name}</h3>
 
       {event.startDate && (
         <p className="event-card-text mt-2 text-sm">
@@ -181,7 +181,7 @@ function EventCard({ event, isSelected, onSelect }: EventCardProps) {
       {event.location && <p className="event-card-text mt-1 text-sm">📍 {event.location}</p>}
 
       {event.sports && event.sports.length > 0 && (
-        <p className={`event-card-text text-xs font-medium mt-3${isSelected ? 'selected' : ''}`}>
+        <p className={`event-card-text mt-3 text-xs font-medium ${isSelected ? 'selected' : ''}`}>
           {event.sports.length} កីឡា
         </p>
       )}

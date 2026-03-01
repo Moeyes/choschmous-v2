@@ -3,13 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  Calendar,
-  Building2,
-  TableProperties,
-  CheckCircle2,
-  PartyPopper,
-} from 'lucide-react';
+import { Calendar, Building2, TableProperties, CheckCircle2, PartyPopper } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useStepWizard } from '@/ui/components/navigation/useStepWizard';
 import { ByNumberSidebar } from './ByNumberSidebar';
@@ -108,11 +102,31 @@ export function ByNumberWizard({
     organizationName: formData.organizationName,
     organizationType: formData.organizationType,
     // Unused fields — required by StepProps type
-    sportId: '', sportName: '', categoryId: '', categoryName: '',
-    fullNameKhmer: '', fullNameEnglish: '', gender: '' as const,
-    dateOfBirth: '', nationality: '', nationalID: '', phone: '',
-    role: '' as const, leaderRole: '' as const, athleteCategory: '' as const,
-    photoUpload: null, nationalityDocumentUpload: null,
+    sportId: '',
+    sportName: '',
+    categoryId: '',
+    categoryName: '',
+    firstNameKhmer: '',
+    lastNameKhmer: '',
+    firstNameLatin: '',
+    lastNameLatin: '',
+    fullNameKhmer: '',
+    fullNameEnglish: '',
+    gender: '' as const,
+    dateOfBirth: '',
+    nationality: '',
+    nationalID: '',
+    phone: '',
+    idDocType: '' as const,
+    selectedDocKeys: '',
+    role: '' as const,
+    leaderRole: '' as const,
+    athleteCategory: '' as const,
+    photoUpload: null,
+    nationalityDocumentUpload: null,
+    docBirthCertificate: null,
+    docNationalId: null,
+    docPassport: null,
   };
 
   const registrationErrors = {
@@ -160,12 +174,7 @@ export function ByNumberWizard({
           />
         );
       case 4:
-        return (
-          <CompletedByNumberStep
-            formData={formData}
-            onGoHome={() => router.push('/')}
-          />
-        );
+        return <CompletedByNumberStep formData={formData} onGoHome={() => router.push('/')} />;
     }
   };
 

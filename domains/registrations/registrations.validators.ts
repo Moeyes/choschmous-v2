@@ -44,9 +44,15 @@ export const urlOrPathSchema = z
 
 // ── Enums ─────────────────────────────────────────────────────
 
-export const genderSchema = z.enum(['Male', 'Female']);
+export const genderSchema = z.enum(['Male', 'Female', 'Other']);
 
-export const idDocTypeSchema = z.enum(['IDCard', 'BirthCertificate']);
+export const idDocTypeSchema = z.enum([
+  'IDCard',
+  'BirthCertificate',
+  'Passport',
+  'FamilyBook',
+  'Other',
+]);
 
 export const positionRoleSchema = z.enum(['Athlete', 'Leader', 'Technical']);
 

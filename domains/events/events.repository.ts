@@ -5,16 +5,19 @@
 
 import type { EventFilters, CreateEventInput, UpdateEventInput } from './events.types';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const BACKEND_URL = (process.env.BACKEND_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(
+  /\/+$/,
+  ''
+);
 const API = `${BACKEND_URL}/api`;
 
-// Maps raw FastAPI response shape → internal Event shape
+// Maps raw FastAPI EventPublic → internal Event shape
 function mapEvent(e: any) {
   return {
     id: e.id,
-    name: e.name_kh ?? e.name ?? '',
-    type: e.type,
-    createdAt: e.created_at,
+    name: e.name_kh ?? '',
+    type: e.type ?? '',
+    createdAt: e.created_at ?? '',
   };
 }
 
@@ -44,6 +47,7 @@ export class EventsRepository {
   }
 
   async create(input: CreateEventInput) {
+    // Backend expects { name_kh, type } — send as-is
     const res = await fetch(`${API}/events/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,8 +61,9 @@ export class EventsRepository {
   }
 
   async update(id: string, input: UpdateEventInput) {
+    // Backend uses PATCH, not PUT
     const res = await fetch(`${API}/events/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
     });

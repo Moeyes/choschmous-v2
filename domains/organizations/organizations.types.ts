@@ -1,22 +1,18 @@
 // ============================================================
 // domains/organizations/organizations.types.ts
-// Organization + Loan data for survey pre-loading
+// Matches backend: Organizations table + OrganizationPublic schema
 // ============================================================
 
-/** Maps to: Organizations table */
-export interface Organization {
-  id: string;
-  name: string;
-  createdAt?: Date;
-}
+// Backend instituteType enum
+export type InstituteType = 'province' | 'ministry';
 
-/** Maps to: Loans table (linked to organization) */
-export interface Loan {
-  id: string;
-  organizationId: string;
-  amount: number;
-  status: string;
-  createdAt?: Date;
+/** Maps to: Organizations table (id, name_kh, type, code, created_at) */
+export interface Organization {
+  id: number;
+  name: string; // mapped from name_kh
+  type: InstituteType;
+  code: string | null;
+  createdAt: string;
 }
 
 // ── DTOs ──────────────────────────────────────────────────────

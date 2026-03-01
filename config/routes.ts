@@ -41,8 +41,8 @@ export const ROUTES = {
     CATEGORIES: '/superadmin/categories',
     MEDALS: '/superadmin/medals',
     LEADERBOARD: '/superadmin/leaderboard',
-    ASSIGNMENTS: '/superadmin/assignments', // sports_event_org
-    SESSIONS: '/superadmin/sessions', // refresh_tokens
+    ASSIGNMENTS: '/superadmin/assignments',
+    SESSIONS: '/superadmin/sessions', 
     DASHBOARD: '/superadmin/dashboard',
   },
   API: {
@@ -60,7 +60,7 @@ export const ROUTES = {
     CATEGORIES: '/admin/categories',
     USERS: '/admin/users',
     MEDALS: '/admin/medals',
-    LEADERBOARD: '/admin/leaderboard', // from participation_per_sport + medals
+    LEADERBOARD: '/admin/leaderboard', 
     SPORT_EVENT_ORGS: '/admin/assignments',
   },
 } as const;

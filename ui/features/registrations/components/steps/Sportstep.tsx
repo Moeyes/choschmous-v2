@@ -72,7 +72,7 @@ export function SportStep({ formData, setFields, errors, onNext }: StepProps) {
       categoryName: '',
     };
     setFields(fields);
-    (onNext as any)(fields);
+    onNext(fields);
   };
 
   return (

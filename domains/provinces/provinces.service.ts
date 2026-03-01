@@ -19,12 +19,12 @@ export class ProvincesService {
   }
 
   async create(input: CreateProvinceInput) {
-    return this.repo.create(createProvinceSchema.parse(input));
+    return this.repo.create(createProvinceSchema.parse(input) as CreateProvinceInput);
   }
 
   async update(id: number, input: UpdateProvinceInput) {
     await this.getById(id);
-    return this.repo.update(id, updateProvinceSchema.parse(input));
+    return this.repo.update(id, updateProvinceSchema.parse(input) as UpdateProvinceInput);
   }
 
   async delete(id: number) {

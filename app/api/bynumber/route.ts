@@ -2,7 +2,10 @@ import { NextRequest } from 'next/server';
 import { ok, created, handleError } from '@/lib/api/response';
 import { z } from 'zod';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const BACKEND_URL = (process.env.BACKEND_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(
+  /\/$/,
+  ''
+);
 const API = `${BACKEND_URL}/api`;
 
 const byNumberSchema = z.object({
@@ -19,7 +22,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sports_Events_id: body.sportsEventOrgId,  // FK → sports_event_org.id
+        sports_Events_id: body.sportsEventOrgId, // FK → sports_event_org.id
         male_count: body.maleCount,
         female_count: body.femaleCount,
       }),
